@@ -14,6 +14,8 @@
 // Include common definitions from above.
 apply from: '../build.common.gradle'
 apply from: '../build.dependencies.gradle'
+apply plugin: "com.diffplug.spotless"
+apply plugin: 'kotlin-android'
 
 android {
     namespace = 'org.firstinspires.ftc.teamcode'
@@ -25,4 +27,41 @@ android {
 
 dependencies {
     implementation project(':FtcRobotController')
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.12.7'
+    implementation 'org.jetbrains.kotlin:kotlin-stdlib:1.4.21'
+}
+spotless {
+    java {
+        // Use Google's Java formatter
+        googleJavaFormat()
+
+        // Import order
+        importOrder 'java', 'javax', 'org', 'com', ''
+
+        // Remove unused imports
+        removeUnusedImports()
+
+        // Apply formatting to all Java files
+        target '**/*.java'
+    }
+
+    kotlin {
+        // Use ktlint for Kotlin files
+        ktlint()
+
+        // Apply formatting to all Kotlin files
+        target '**/*.kt'
+    }
+}
+
+// Make spotlessApply run before compilation
+tasks.withType(JavaCompile) {
+    dependsOn 'spotlessApply'
+}
+
+// Also make it run before Kotlin compilation if you have Kotlin code
+tasks.whenTaskAdded { task ->
+    if (task.name.contains('compile') && task.name.contains('Kotlin')) {
+        task.dependsOn 'spotlessApply'
+    }
 }

@@ -5,6 +5,7 @@
  */
 
 buildscript {
+    ext.kotlin_version = '1.9.22'
     repositories {
         mavenCentral()
         google()
@@ -12,6 +13,8 @@ buildscript {
     dependencies {
         // Note for FTC Teams: Do not modify this yourself.
         classpath 'com.android.tools.build:gradle:8.7.0'
+        classpath "com.diffplug.spotless:spotless-plugin-gradle:6.22.0"
+        classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:${kotlin_version}"
     }
 }
 
@@ -26,4 +29,38 @@ allprojects {
 
 repositories {
     mavenCentral()
+}
+apply plugin: 'com.diffplug.spotless'
+
+spotless {
+    // Configure spotless to not create backup files (which causes duplication)
+    enforceCheck = false  // Make formatting optional
+
+    java {
+        // Don't create backup files
+        targetExclude("build/**/*.java")
+        toggleOffOn()
+        trimTrailingWhitespace()
+        indentWithSpaces(4)
+        endWithNewline()
+
+        // Add any other Java formatting rules you need
+    }
+
+    kotlin {
+        // Don't create backup files for Kotlin
+        targetExclude("build/**/*.kt")
+        toggleOffOn()
+        trimTrailingWhitespace()
+        indentWithSpaces(4)
+        endWithNewline()
+    }
+
+    format 'misc', {
+        // Define rules for other file types if needed
+        target '**/*.gradle', '**/*.md', '**/*.gitignore'
+        trimTrailingWhitespace()
+        indentWithSpaces(4)
+        endWithNewline()
+    }
 }
