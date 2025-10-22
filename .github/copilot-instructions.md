@@ -32,15 +32,15 @@ This repository contains code for an FTC (FIRST Tech Challenge) robot using Java
 - Docs: https://ftc-docs.firstinspires.org/en/latest/index.html
 - Focus: OpModes, hardware mapping, telemetry, gamepad input, autonomous and teleop programming.
 
-### 2. Pedro Pathing (version 2.0.2)
+### 2. Pedro Pathing (version 2.0.3)
 - Docs: https://pedropathing.com/docs/pathing
 - Focus: Autonomous path planning, path following, localization.
 
-### 3. SolversLib (version 0.3.3 Beta)
-- Docs: https://docs.seattlesolvers.com/solverslib-docs-beta-0.3.3
+### 3. SolversLib (version 0.3.3)
+- Docs: https://docs.seattlesolvers.com/
 - Focus: Command Based programming, hardware additions, subsystems, commands, controllers.
 
-### 4. Panels (version 1.0.2)
+### 4. Panels (version 1.0.9)
 - Docs: https://panels.bylazar.com/docs/com.bylazar.docs/
 - Focus: Dashboard integration, telemetry visualization, real-time data monitoring, limelight dashboard.
 
