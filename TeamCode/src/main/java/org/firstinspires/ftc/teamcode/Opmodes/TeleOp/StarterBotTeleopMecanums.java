@@ -63,10 +63,12 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 // @Disabled
 public class StarterBotTeleopMecanums extends OpMode {
   final double FEED_TIME_SECONDS =
-          0.20; // The feeder servos run this long when a shot is requested.
+      0.20; // The feeder servos run this long when a shot is requested.
   final double STOP_SPEED = 0.0; // We send this power to the servos when we want them to stop.
   final double FULL_SPEED = 1.0;
   private PIDFController launchController;
+  public static double Kp = 0.01, Ki = 0.4, Kd = 0.0, Ks = 0.0431;
+  private double actualVelocity = 0;
 
   /*
    * When we control our launcher motor, we are using encoders. These allow the control system
@@ -74,8 +76,9 @@ public class StarterBotTeleopMecanums extends OpMode {
    * velocity. Here we are setting the target, and minimum velocity that the launcher should run
    * at. The minimum velocity is a threshold for determining when to fire.
    */
-  final double LAUNCHER_TARGET_VELOCITY = 1125;
-  final double LAUNCHER_MIN_VELOCITY = 1075;
+  final double LAUNCHER_TARGET_VELOCITY = 1700;
+  final double LAUNCHER_MIN_VELOCITY = 1600;
+  private double LAUNCHER_DESIRED_VELOCITY = 0;
 
   // Declare OpMode members.
   private DcMotor leftFrontDrive = null;
@@ -138,7 +141,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     launcher = hardwareMap.get(DcMotorEx.class, "launcher");
     leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
     rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
-    launchController = new PIDFController(300, 0, 0, 0);
+    launchController = new PIDFController(Kp, Ki, Kd, 0);
 
     /*
      * To drive forward, most robots need the motor on one side to be reversed,
@@ -159,6 +162,8 @@ public class StarterBotTeleopMecanums extends OpMode {
      * into the port right beside the motor itself. And that the motors polarity is consistent
      * through any wiring.
      */
+    // Reset encoder then use RUN_WITHOUT_ENCODER so getVelocity() reports correctly
+    launcher.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
     launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
 
     /*
@@ -207,6 +212,15 @@ public class StarterBotTeleopMecanums extends OpMode {
    */
   @Override
   public void loop() {
+    actualVelocity = launcher.getVelocity();
+    if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
+      launcher.setPower(
+          MathUtils.clamp(
+              (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY) + Ks), -1, 1));
+    } else {
+      launcher.setPower(0);
+    }
+
     /*
      * Here we call a function called arcadeDrive. The arcadeDrive function takes the input from
      * the joysticks, and applies power to the left and right drive motor to move the robot
@@ -223,11 +237,9 @@ public class StarterBotTeleopMecanums extends OpMode {
      * queuing a shot.
      */
     if (gamepad1.y) {
-      launcher.setPower(
-              MathUtils.clamp(
-                      launchController.calculate(launcher.getVelocity(), LAUNCHER_TARGET_VELOCITY), -1, 1));
+      LAUNCHER_DESIRED_VELOCITY = LAUNCHER_TARGET_VELOCITY;
     } else if (gamepad1.b) { // stop flywheel
-      launcher.setPower(0);
+      LAUNCHER_DESIRED_VELOCITY = 0;
     }
 
     /*
@@ -239,7 +251,8 @@ public class StarterBotTeleopMecanums extends OpMode {
      * Show the state and motor powers
      */
     telemetry.addData("State", launchState);
-    telemetry.addData("motorSpeed", launcher.getVelocity());
+    telemetry.addData("motorSpeed", actualVelocity);
+    telemetry.addData("launcherPower", launcher.getPower());
   }
 
   /*
@@ -275,8 +288,9 @@ public class StarterBotTeleopMecanums extends OpMode {
         }
         break;
       case SPIN_UP:
-        launcher.setVelocity(LAUNCHER_TARGET_VELOCITY);
-        if (launcher.getVelocity() > LAUNCHER_MIN_VELOCITY) {
+        // calculate(actualVelocity, targetVelocity) — ensure correct parameter order
+        LAUNCHER_DESIRED_VELOCITY = LAUNCHER_TARGET_VELOCITY;
+        if (actualVelocity > LAUNCHER_MIN_VELOCITY) {
           launchState = LaunchState.LAUNCH;
         }
         break;
