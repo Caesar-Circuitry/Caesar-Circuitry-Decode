@@ -9,16 +9,28 @@ public class Constants {
   //    }
   @Configurable
   public static class Launcher {
+    // shared launch/feeder constants used across opmodes
     public static final double FEED_TIME_SECONDS = 0.20;
     public static final double COOLDOWN_TIME_SECONDS = 0.25;
-    public static final double kP = 0.1; // velocity PIDF coefficients for flywheel
-    public static final double kI = 0; // velocity PIDF coefficients for flywheel
-    public static final double kD = 0; // velocity PIDF coefficients for flywheel
-    public static final double kF = 10; // velocity PIDF coefficients for flywheel
-    public static final double TARGET_VELOCITY = 1125; // target velocity for flywheel
-    public static final double MIN_VELOCITY = 1075;
-    public static final double Feeder_STOP_SPEED =
-        0.0; // We send this power to the servos when we want them to stop.
-    public static final double Feeder_FULL_SPEED = 1.0;
+
+    // PIDF / controller gains used in autos & teleop (named to match existing usages)
+    public static final double Kp = 0.01;
+    public static final double Ki = 0.4;
+    public static final double Kd = 0.0;
+    public static final double Ks = 0.0431;
+
+    // velocity targets / thresholds
+    public static final double TARGET_VELOCITY = 1700.0;
+    public static final double MIN_VELOCITY = 1600.0;
+
+    // feeder servo powers
+    public static final double FEEDER_POWER = 1.0;
+    public static final double FEEDER_STOP = 0.0;
+
+    // shared shot count used by autos
+    public static final int TOTAL_SHOTS = 3;
+
+    // nominal battery voltage used for simple voltage compensation
+    public static final double NOMINAL_BATTERY_VOLTAGE = 12.0;
   }
 }

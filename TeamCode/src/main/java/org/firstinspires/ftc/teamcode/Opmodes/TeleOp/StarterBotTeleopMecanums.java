@@ -32,14 +32,20 @@
 
 package org.firstinspires.ftc.teamcode.Opmodes.TeleOp;
 
+import org.firstinspires.ftc.teamcode.Config.Constants;
+
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 
+import java.util.List;
+
+import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.util.MathUtils;
@@ -62,22 +68,16 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 @TeleOp(name = "StarterBotTeleopMecanums", group = "StarterBot")
 // @Disabled
 public class StarterBotTeleopMecanums extends OpMode {
-  final double FEED_TIME_SECONDS =
-      0.20; // The feeder servos run this long when a shot is requested.
-  final double STOP_SPEED = 0.0; // We send this power to the servos when we want them to stop.
-  final double FULL_SPEED = 1.0;
+  // shared launcher constants moved to Constants.Launcher
   private PIDFController launchController;
-  public static double Kp = 0.01, Ki = 0.4, Kd = 0.0, Ks = 0.0431;
+  // use Constants.Launcher.Kp/Ki/Kd/Ks when creating controller
   private double actualVelocity = 0;
 
-  /*
-   * When we control our launcher motor, we are using encoders. These allow the control system
-   * to read the current speed of the motor and apply more or less power to keep it at a constant
-   * velocity. Here we are setting the target, and minimum velocity that the launcher should run
-   * at. The minimum velocity is a threshold for determining when to fire.
-   */
-  final double LAUNCHER_TARGET_VELOCITY = 1700;
-  final double LAUNCHER_MIN_VELOCITY = 1600;
+  List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+  private List<VoltageSensor> voltageSensors;
+  // use Constants.Launcher.NOMINAL_BATTERY_VOLTAGE for nominal voltage
+  private double batteryVoltage = Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
+
   private double LAUNCHER_DESIRED_VELOCITY = 0;
 
   // Declare OpMode members.
@@ -90,6 +90,7 @@ public class StarterBotTeleopMecanums extends OpMode {
   private CRServo rightFeeder = null;
 
   ElapsedTime feederTimer = new ElapsedTime();
+  ElapsedTime voltageTimer = new ElapsedTime();
 
   /*
    * TECH TIP: State Machines
@@ -115,6 +116,8 @@ public class StarterBotTeleopMecanums extends OpMode {
   }
 
   private LaunchState launchState;
+  // simple edge detector for right bumper (one-shot press)
+  private boolean prevRightBumper = false;
 
   // Setup a variable for each drive wheel to save power level for telemetry
   double leftFrontPower;
@@ -127,7 +130,11 @@ public class StarterBotTeleopMecanums extends OpMode {
    */
   @Override
   public void init() {
+    for (LynxModule hub : allHubs) {
+      hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
+    }
     launchState = LaunchState.IDLE;
+    voltageSensors = hardwareMap.getAll(VoltageSensor.class);
 
     /*
      * Initialize the hardware variables. Note that the strings used here as parameters
@@ -141,7 +148,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     launcher = hardwareMap.get(DcMotorEx.class, "launcher");
     leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
     rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
-    launchController = new PIDFController(Kp, Ki, Kd, 0);
+    launchController = new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
 
     /*
      * To drive forward, most robots need the motor on one side to be reversed,
@@ -150,10 +157,10 @@ public class StarterBotTeleopMecanums extends OpMode {
      * Note: The settings here assume direct drive on left and right wheels. Gear
      * Reduction or 90 Deg drives may require direction flips
      */
-    leftFrontDrive.setDirection(DcMotor.Direction.REVERSE);
-    rightFrontDrive.setDirection(DcMotor.Direction.FORWARD);
-    leftBackDrive.setDirection(DcMotor.Direction.FORWARD);
-    rightBackDrive.setDirection(DcMotor.Direction.REVERSE);
+    leftFrontDrive.setDirection(DcMotorSimple.Direction.REVERSE);
+    rightFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
+    leftBackDrive.setDirection(DcMotorSimple.Direction.FORWARD);
+    rightBackDrive.setDirection(DcMotorSimple.Direction.REVERSE);
 
     /*
      * Here we set our launcher to the RUN_USING_ENCODER runmode.
@@ -180,8 +187,8 @@ public class StarterBotTeleopMecanums extends OpMode {
     /*
      * set Feeders to an initial value to initialize the servo controller
      */
-    leftFeeder.setPower(STOP_SPEED);
-    rightFeeder.setPower(STOP_SPEED);
+    leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
+    rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
 
     /*
      * Much like our drivetrain motors, we set the left feeder servo to reverse so that they
@@ -194,72 +201,65 @@ public class StarterBotTeleopMecanums extends OpMode {
      */
     telemetry.addData("Status", "Initialized");
   }
-
-  /*
-   * Code to run REPEATEDLY after the driver hits INIT, but before they hit START
-   */
   @Override
-  public void init_loop() {}
-
-  /*
-   * Code to run ONCE when the driver hits START
-   */
-  @Override
-  public void start() {}
+  public void start() {
+    voltageTimer.reset();
+  }
 
   /*
    * Code to run REPEATEDLY after the driver hits START but before they hit STOP
    */
   @Override
   public void loop() {
+
+    if (voltageTimer.seconds() >= 5.0) {
+      batteryVoltage = getBatteryVoltage();
+      voltageTimer.reset();
+    }
+
     actualVelocity = launcher.getVelocity();
     if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
       launcher.setPower(
-          MathUtils.clamp(
-              (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY) + Ks), -1, 1));
+          (MathUtils.clamp(
+                      (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY) + Constants.Launcher.Ks),
+                      -1,
+                      1)
+                  * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
+              / batteryVoltage);
     } else {
       launcher.setPower(0);
     }
 
-    /*
-     * Here we call a function called arcadeDrive. The arcadeDrive function takes the input from
-     * the joysticks, and applies power to the left and right drive motor to move the robot
-     * as requested by the driver. "arcade" refers to the control style we're using here.
-     * Much like a classic arcade game, when you move the left joystick forward both motors
-     * work to drive the robot forward, and when you move the right joystick left and right
-     * both motors work to rotate the robot. Combinations of these inputs can be used to create
-     * more complex maneuvers.
-     */
+    if (actualVelocity > Constants.Launcher.MIN_VELOCITY && launchState == LaunchState.SPIN_UP) {
+      gamepad1.rumbleBlips(3);
+      gamepad1.setLedColor(0, 255, 0, 1000);
+    } else {
+      gamepad1.setLedColor(255, 0, 0, 1000);
+    }
+
+    // drive
     mecanumDrive(-gamepad1.left_stick_y, gamepad1.left_stick_x, gamepad1.right_stick_x);
 
-    /*
-     * Here we give the user control of the speed of the launcher motor without automatically
-     * queuing a shot.
-     */
+    // launcher speed control
     if (gamepad1.y) {
-      LAUNCHER_DESIRED_VELOCITY = LAUNCHER_TARGET_VELOCITY;
+      LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
     } else if (gamepad1.b) { // stop flywheel
       LAUNCHER_DESIRED_VELOCITY = 0;
     }
 
-    /*
-     * Now we call our "Launch" function.
-     */
-    launch(gamepad1.rightBumperWasPressed());
+    // Detect a one-shot press of the right bumper and call launch with that event
+    boolean rightBumperPressed = gamepad1.right_bumper && !prevRightBumper;
+    launch(rightBumperPressed);
+    prevRightBumper = gamepad1.right_bumper;
 
-    /*
-     * Show the state and motor powers
-     */
+    // telemetry and housekeeping
     telemetry.addData("State", launchState);
     telemetry.addData("motorSpeed", actualVelocity);
     telemetry.addData("launcherPower", launcher.getPower());
+    for (LynxModule hub : allHubs) {
+      hub.clearBulkCache();
+    }
   }
-
-  /*
-   * Code to run ONCE after the driver hits STOP
-   */
-  @Override
-  public void stop() {}
 
   void mecanumDrive(double forward, double strafe, double rotate) {
 
@@ -288,25 +288,39 @@ public class StarterBotTeleopMecanums extends OpMode {
         }
         break;
       case SPIN_UP:
-        // calculate(actualVelocity, targetVelocity) — ensure correct parameter order
-        LAUNCHER_DESIRED_VELOCITY = LAUNCHER_TARGET_VELOCITY;
-        if (actualVelocity > LAUNCHER_MIN_VELOCITY) {
+        LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
+        if (actualVelocity > Constants.Launcher.MIN_VELOCITY) {
           launchState = LaunchState.LAUNCH;
         }
         break;
       case LAUNCH:
-        leftFeeder.setPower(FULL_SPEED);
-        rightFeeder.setPower(FULL_SPEED);
+        leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
+        rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
         feederTimer.reset();
         launchState = LaunchState.LAUNCHING;
         break;
       case LAUNCHING:
-        if (feederTimer.seconds() > FEED_TIME_SECONDS) {
+        if (feederTimer.seconds() > Constants.Launcher.FEED_TIME_SECONDS) {
           launchState = LaunchState.IDLE;
-          leftFeeder.setPower(STOP_SPEED);
-          rightFeeder.setPower(STOP_SPEED);
+          leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
+          rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
         }
         break;
     }
+  }
+
+  private double getBatteryVoltage() {
+    if (voltageSensors == null || voltageSensors.isEmpty()) return 0.0;
+    double minV = Double.POSITIVE_INFINITY;
+    for (VoltageSensor vs : voltageSensors) {
+      double v = vs.getVoltage();
+      // some sensors may return 0 if unknown; skip zeros unless all zeros
+      if (v > 0) minV = Math.min(minV, v);
+    }
+    if (minV == Double.POSITIVE_INFINITY) {
+      // all sensors returned 0 or list empty
+      return 0.0;
+    }
+    return minV;
   }
 }

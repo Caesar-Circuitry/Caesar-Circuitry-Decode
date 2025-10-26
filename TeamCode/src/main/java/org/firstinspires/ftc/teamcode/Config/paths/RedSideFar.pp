@@ -1,0 +1,1 @@
+{"startPoint":{"x":86,"y":8,"heading":"linear","startDeg":90,"endDeg":180},"lines":[{"endPoint":{"x":120,"y":126,"heading":"linear","reverse":false,"startDeg":90,"endDeg":38},"controlPoints":[{"x":75,"y":95}],"color":"#996768"}]}
