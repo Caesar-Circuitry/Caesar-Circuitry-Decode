@@ -11,17 +11,18 @@ public class Constants {
   public static class Launcher {
     // shared launch/feeder constants used across opmodes
     public static final double FEED_TIME_SECONDS = 0.20;
+    public static final double FEED_TIME_SECONDSAUTO = 1;
     public static final double COOLDOWN_TIME_SECONDS = 0.25;
 
     // PIDF / controller gains used in autos & teleop (named to match existing usages)
     public static final double Kp = 0.01;
-    public static final double Ki = 0.4;
+    public static final double Ki = 0.5;
     public static final double Kd = 0.0;
     public static final double Ks = 0.0431;
 
     // velocity targets / thresholds
-    public static final double TARGET_VELOCITY = 1700.0;
-    public static final double MIN_VELOCITY = 1600.0;
+    public static final double TARGET_VELOCITY = 1000;
+    public static final double MIN_VELOCITY = 950;
 
     // feeder servo powers
     public static final double FEEDER_POWER = 1.0;

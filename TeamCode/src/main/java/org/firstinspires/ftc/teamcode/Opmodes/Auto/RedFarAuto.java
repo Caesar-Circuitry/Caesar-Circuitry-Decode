@@ -2,8 +2,8 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import java.util.List;
 
-import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 import org.firstinspires.ftc.teamcode.Config.Constants;
+import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -69,7 +69,8 @@ public class RedFarAuto extends OpMode {
       case 2:
         // Spin up launcher using closed-loop
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
-        if (launcher != null && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
+        if (launcher != null
+            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
           feederTimer.reset();
           leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
           rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -173,7 +174,9 @@ public class RedFarAuto extends OpMode {
       rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
       leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
 
-      launchController = new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+      launchController =
+          new PIDFController(
+              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
       voltageSensors = hardwareMap.getAll(VoltageSensor.class);
       batteryVoltage = getBatteryVoltage();
     } catch (Exception e) {
@@ -203,7 +206,8 @@ public class RedFarAuto extends OpMode {
   }
 
   private double getBatteryVoltage() {
-    if (voltageSensors == null || voltageSensors.isEmpty()) return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
+    if (voltageSensors == null || voltageSensors.isEmpty())
+      return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
     double minV = Double.POSITIVE_INFINITY;
     for (VoltageSensor vs : voltageSensors) {
       double v = vs.getVoltage();

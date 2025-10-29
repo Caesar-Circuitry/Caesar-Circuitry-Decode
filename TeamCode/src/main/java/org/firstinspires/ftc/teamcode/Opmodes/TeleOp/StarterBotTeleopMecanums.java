@@ -32,11 +32,12 @@
 
 package org.firstinspires.ftc.teamcode.Opmodes.TeleOp;
 
-import org.firstinspires.ftc.teamcode.Config.Constants;
-
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
+import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import java.util.List;
+
+import org.firstinspires.ftc.teamcode.Config.Constants;
 
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
@@ -73,7 +74,7 @@ public class StarterBotTeleopMecanums extends OpMode {
   // use Constants.Launcher.Kp/Ki/Kd/Ks when creating controller
   private double actualVelocity = 0;
 
-  List<LynxModule> allHubs = hardwareMap.getAll(LynxModule.class);
+  List<LynxModule> allHubs;
   private List<VoltageSensor> voltageSensors;
   // use Constants.Launcher.NOMINAL_BATTERY_VOLTAGE for nominal voltage
   private double batteryVoltage = Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
@@ -130,6 +131,7 @@ public class StarterBotTeleopMecanums extends OpMode {
    */
   @Override
   public void init() {
+    allHubs = hardwareMap.getAll(LynxModule.class);
     for (LynxModule hub : allHubs) {
       hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL);
     }
@@ -148,7 +150,8 @@ public class StarterBotTeleopMecanums extends OpMode {
     launcher = hardwareMap.get(DcMotorEx.class, "launcher");
     leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
     rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
-    launchController = new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+    launchController =
+        new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
 
     /*
      * To drive forward, most robots need the motor on one side to be reversed,
@@ -182,7 +185,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     rightFrontDrive.setZeroPowerBehavior(BRAKE);
     leftBackDrive.setZeroPowerBehavior(BRAKE);
     rightBackDrive.setZeroPowerBehavior(BRAKE);
-    launcher.setZeroPowerBehavior(BRAKE);
+    launcher.setZeroPowerBehavior(FLOAT);
 
     /*
      * set Feeders to an initial value to initialize the servo controller
@@ -201,6 +204,7 @@ public class StarterBotTeleopMecanums extends OpMode {
      */
     telemetry.addData("Status", "Initialized");
   }
+
   @Override
   public void start() {
     voltageTimer.reset();
@@ -218,10 +222,11 @@ public class StarterBotTeleopMecanums extends OpMode {
     }
 
     actualVelocity = launcher.getVelocity();
-    if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
+    if (!(LAUNCHER_DESIRED_VELOCITY == 0)) {
       launcher.setPower(
           (MathUtils.clamp(
-                      (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY) + Constants.Launcher.Ks),
+                      (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
+                          + Constants.Launcher.Ks),
                       -1,
                       1)
                   * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)

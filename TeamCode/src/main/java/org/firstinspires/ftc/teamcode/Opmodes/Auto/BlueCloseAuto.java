@@ -2,8 +2,8 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import java.util.List;
 
-import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 import org.firstinspires.ftc.teamcode.Config.Constants;
+import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
@@ -24,12 +24,12 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 @Autonomous(name = "BlueCloseAuto")
 public class BlueCloseAuto extends OpMode {
   private Follower follower;
-  private Timer pathTimer, opmodeTimer;
+  private Timer pathTimer, opmodeTimer, secondShot;
   private int pathState;
 
   // Values taken from Config/paths/BlueSideClose.pp
   private final Pose startPose = new Pose(15.466666666666667, 112, Math.toRadians(90));
-  private final Pose scorePose = new Pose(22, 124, Math.toRadians(142));
+  private final Pose scorePose = new Pose(25, 128, Math.toRadians(146));
 
   private Path scorePath;
 
@@ -38,6 +38,7 @@ public class BlueCloseAuto extends OpMode {
   private CRServo leftFeeder, rightFeeder;
   private ElapsedTime feederTimer;
   private int shotsFired = 0;
+  private boolean firstTime = true;
 
   // LAUNCHER_OPEN_LOOP_POWER remains here as it's specific to this opmode
   private static final double LAUNCHER_OPEN_LOOP_POWER = 0.85; // open-loop spin power (fallback)
@@ -84,7 +85,8 @@ public class BlueCloseAuto extends OpMode {
         // Spin up launcher using closed-loop PIDF to the desired velocity
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
         // Feed immediately once the launcher reports being at-or-above the minimum velocity
-        if (launcher != null && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
+        if (launcher != null
+            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
           feederTimer.reset();
           leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
           rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -102,6 +104,14 @@ public class BlueCloseAuto extends OpMode {
             LAUNCHER_DESIRED_VELOCITY = 0;
             if (launcher != null) launcher.setPower(0);
             setPathState(4);
+          } else if (shotsFired == 2) {
+            if (firstTime == true) {
+              firstTime = false;
+              secondShot.resetTimer();
+            }
+            if (secondShot.getElapsedTimeSeconds() >= Constants.Launcher.FEED_TIME_SECONDSAUTO) {
+              setPathState(2);
+            }
           } else {
             // spin up again (closed-loop) and feed next
             setPathState(2);
@@ -176,6 +186,7 @@ public class BlueCloseAuto extends OpMode {
   public void init() {
     pathTimer = new Timer();
     opmodeTimer = new Timer();
+    secondShot = new Timer();
     feederTimer = new ElapsedTime();
     voltageTimer = new ElapsedTime();
     opmodeTimer.resetTimer();
@@ -201,7 +212,9 @@ public class BlueCloseAuto extends OpMode {
       leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
 
       // initialize PIDF controller and voltage sensors for closed-loop control
-      launchController = new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+      launchController =
+          new PIDFController(
+              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
       voltageSensors = hardwareMap.getAll(VoltageSensor.class);
       batteryVoltage = getBatteryVoltage();
     } catch (Exception e) {
@@ -238,7 +251,8 @@ public class BlueCloseAuto extends OpMode {
 
   // Helper: read battery voltage (copied from TeleOp helper)
   private double getBatteryVoltage() {
-    if (voltageSensors == null || voltageSensors.isEmpty()) return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
+    if (voltageSensors == null || voltageSensors.isEmpty())
+      return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
     double minV = Double.POSITIVE_INFINITY;
     for (VoltageSensor vs : voltageSensors) {
       double v = vs.getVoltage();
