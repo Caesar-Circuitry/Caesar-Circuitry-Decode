@@ -1,3 +1,4 @@
+// java
 package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import java.util.List;
@@ -24,7 +25,7 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 @Autonomous(name = "RedCloseAuto")
 public class RedCloseAuto extends OpMode {
   private Follower follower;
-  private Timer pathTimer, opmodeTimer;
+  private Timer pathTimer, opmodeTimer, interShotTimer;
   private int pathState;
 
   // Values taken from Config/paths/RedSideClose.pp
@@ -46,8 +47,7 @@ public class RedCloseAuto extends OpMode {
 
   // Battery voltage compensation
   private List<VoltageSensor> voltageSensors;
-  private static final double NOMINAL_BATTERY_VOLTAGE = 12.0;
-  private double batteryVoltage = NOMINAL_BATTERY_VOLTAGE;
+  private double batteryVoltage = Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
@@ -73,7 +73,7 @@ public class RedCloseAuto extends OpMode {
         // Spin up launcher using closed-loop
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
         if (launcher != null
-            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
+                && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
           feederTimer.reset();
           leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
           rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -90,12 +90,21 @@ public class RedCloseAuto extends OpMode {
             if (launcher != null) launcher.setPower(0);
             setPathState(4);
           } else {
-            setPathState(2);
+            // start inter-shot pause to allow flywheel to spin up again before next feed
+            if (interShotTimer != null) interShotTimer.resetTimer();
+            setPathState(5);
           }
         }
         break;
       case 4:
         // finished
+        break;
+      case 5:
+        // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
+        if (interShotTimer != null
+                && interShotTimer.getElapsedTimeSeconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
+          setPathState(2);
+        }
         break;
       default:
         break;
@@ -124,13 +133,13 @@ public class RedCloseAuto extends OpMode {
       actualVelocity = launcher.getVelocity();
       if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
         double power =
-            (MathUtils.clamp(
+                (MathUtils.clamp(
                         (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
-                            + Constants.Launcher.Ks),
+                                + Constants.Launcher.Ks),
                         -1,
                         1)
-                    * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
-                / Math.max(1e-6, batteryVoltage);
+                        * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
+                        / Math.max(1e-6, batteryVoltage);
         launcher.setPower(power);
       } else {
         launcher.setPower(0);
@@ -155,9 +164,10 @@ public class RedCloseAuto extends OpMode {
   public void init() {
     pathTimer = new Timer();
     opmodeTimer = new Timer();
-    opmodeTimer.resetTimer();
+    interShotTimer = new Timer();
     feederTimer = new ElapsedTime();
     voltageTimer = new ElapsedTime();
+    opmodeTimer.resetTimer();
 
     follower = PedroConstants.createFollower(hardwareMap);
     buildPaths();
@@ -177,8 +187,8 @@ public class RedCloseAuto extends OpMode {
       leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
 
       launchController =
-          new PIDFController(
-              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+              new PIDFController(
+                      Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
       voltageSensors = hardwareMap.getAll(VoltageSensor.class);
       batteryVoltage = getBatteryVoltage();
     } catch (Exception e) {
