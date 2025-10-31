@@ -29,8 +29,8 @@ public class BlueCloseAuto extends OpMode {
   private int pathState;
 
   // Values taken from Config/paths/BlueSideClose.pp
-  private final Pose startPose = new Pose(15.466666666666667, 112, Math.toRadians(90));
-  private final Pose scorePose = new Pose(25, 128, Math.toRadians(146));
+  private final Pose startPose = new Pose(63.692, 135.771, Math.toRadians(90));
+  private final Pose scorePose = new Pose(26, 126, Math.toRadians(146));
 
   private Path scorePath;
 
@@ -55,10 +55,7 @@ public class BlueCloseAuto extends OpMode {
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
-    // Build a single bezier curve between startPose and scorePose using the control point from the
-    // .pp
-    // Control point: (58, 97)
-    scorePath = new Path(new BezierCurve(startPose, new Pose(58, 97, 0), scorePose));
+    scorePath = new Path(new BezierCurve(startPose, new Pose(64.035, 66.857), scorePose));
     // ensure heading interpolates linearly between start and end headings
     scorePath.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
   }
@@ -81,7 +78,7 @@ public class BlueCloseAuto extends OpMode {
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
         // Feed immediately once the launcher reports being at-or-above the minimum velocity
         if (launcher != null
-                && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
+            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
           feederTimer.reset();
           leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
           rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -112,7 +109,8 @@ public class BlueCloseAuto extends OpMode {
       case 5:
         // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
         if (interShotTimer != null
-                && interShotTimer.getElapsedTimeSeconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
+            && interShotTimer.getElapsedTimeSeconds()
+                >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
           setPathState(2); // go back to spin-up (closed-loop) and then feed when ready
         }
         break;
@@ -147,15 +145,15 @@ public class BlueCloseAuto extends OpMode {
     // Closed-loop launcher velocity control (if controller present)
     if (launcher != null && launchController != null) {
       actualVelocity = launcher.getVelocity();
-      if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
+      if (!(LAUNCHER_DESIRED_VELOCITY == 0)) {
         double power =
-                (MathUtils.clamp(
+            (MathUtils.clamp(
                         (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
-                                + Constants.Launcher.Ks),
+                            + Constants.Launcher.Ks),
                         -1,
                         1)
-                        * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
-                        / batteryVoltage;
+                    * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
+                / batteryVoltage;
         launcher.setPower(power);
       } else {
         launcher.setPower(0);
@@ -208,8 +206,8 @@ public class BlueCloseAuto extends OpMode {
 
       // initialize PIDF controller and voltage sensors for closed-loop control
       launchController =
-              new PIDFController(
-                      Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+          new PIDFController(
+              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
       voltageSensors = hardwareMap.getAll(VoltageSensor.class);
       batteryVoltage = getBatteryVoltage();
     } catch (Exception e) {

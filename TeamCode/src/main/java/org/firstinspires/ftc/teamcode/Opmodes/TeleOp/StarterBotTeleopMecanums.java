@@ -1,7 +1,6 @@
 package org.firstinspires.ftc.teamcode.Opmodes.TeleOp;
 
 import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
-import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.FLOAT;
 
 import java.util.List;
 
@@ -23,6 +22,7 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 public class StarterBotTeleopMecanums extends OpMode {
   private PIDFController launchController;
   private double actualVelocity = 0;
+  private boolean brakeFlag = false;
 
   List<LynxModule> allHubs;
   private List<VoltageSensor> voltageSensors;
@@ -76,7 +76,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
     rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
     launchController =
-            new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+        new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
 
     leftFrontDrive.setDirection(DcMotorSimple.Direction.REVERSE);
     rightFrontDrive.setDirection(DcMotorSimple.Direction.FORWARD);
@@ -90,7 +90,7 @@ public class StarterBotTeleopMecanums extends OpMode {
     rightFrontDrive.setZeroPowerBehavior(BRAKE);
     leftBackDrive.setZeroPowerBehavior(BRAKE);
     rightBackDrive.setZeroPowerBehavior(BRAKE);
-    launcher.setZeroPowerBehavior(FLOAT);
+    launcher.setZeroPowerBehavior(BRAKE);
 
     leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
     rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
@@ -117,15 +117,16 @@ public class StarterBotTeleopMecanums extends OpMode {
     }
 
     actualVelocity = launcher.getVelocity();
-    if (!(LAUNCHER_DESIRED_VELOCITY == 0)) {
+    if (!(LAUNCHER_DESIRED_VELOCITY == 0 && !brakeFlag)) {
       launcher.setPower(
-              (MathUtils.clamp(
+          (MathUtils.clamp(
                       (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
-                              + Constants.Launcher.Ks),
+                          + Constants.Launcher.Ks),
                       -1,
                       1)
-                      * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
-                      / batteryVoltage);
+                  * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
+              / batteryVoltage);
+      brakeFlag = false;
     } else {
       launcher.setPower(0);
     }
@@ -156,8 +157,11 @@ public class StarterBotTeleopMecanums extends OpMode {
     // launcher speed control
     if (gamepad1.y) {
       LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
-    } else if (gamepad1.b) { // stop flywheel
+    } else if (gamepad1.left_bumper) { // stop flywheel
       LAUNCHER_DESIRED_VELOCITY = 0;
+    }
+    if (gamepad1.square) {
+      brakeFlag = true;
     }
 
     boolean rightBumperPressed = gamepad1.right_bumper && !prevRightBumper;

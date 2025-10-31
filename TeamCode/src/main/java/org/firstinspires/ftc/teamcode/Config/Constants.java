@@ -11,7 +11,7 @@ public class Constants {
   public static class Launcher {
     // shared launch/feeder constants used across opmodes
     public static final double FEED_TIME_SECONDS = 0.20;
-    public static final double INTER_SHOT_PAUSE_SECONDS = 1;
+    public static final double INTER_SHOT_PAUSE_SECONDS = 2;
     public static final double COOLDOWN_TIME_SECONDS = 0.25;
 
     // PIDF / controller gains used in autos & teleop (named to match existing usages)

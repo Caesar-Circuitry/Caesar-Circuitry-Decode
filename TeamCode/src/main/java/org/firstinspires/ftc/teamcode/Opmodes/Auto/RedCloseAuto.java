@@ -1,4 +1,3 @@
-// java
 package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import java.util.List;
@@ -28,9 +27,11 @@ public class RedCloseAuto extends OpMode {
   private Timer pathTimer, opmodeTimer, interShotTimer;
   private int pathState;
 
-  // Values taken from Config/paths/RedSideClose.pp
-  private final Pose startPose = new Pose(129, 112, Math.toRadians(90));
-  private final Pose scorePose = new Pose(120, 127, Math.toRadians(38));
+  // Mirrored values from BlueCloseAuto: x' = 144 - x, heading' = PI - heading
+  private final Pose startPose =
+      new Pose(80.308, 135.771, Math.PI - Math.toRadians(90)); // mirrored start
+  private final Pose scorePose =
+      new Pose(118.0, 126, Math.PI - Math.toRadians(146)); // mirrored score
 
   private Path scorePath;
 
@@ -40,8 +41,12 @@ public class RedCloseAuto extends OpMode {
   private ElapsedTime feederTimer;
   private int shotsFired = 0;
 
-  // PIDF-based launcher control
+  // LAUNCHER_OPEN_LOOP_POWER remains here as it's specific to this opmode
+  private static final double LAUNCHER_OPEN_LOOP_POWER = 0.85; // open-loop spin power (fallback)
+
+  // PIDF-based launcher control (ported from StarterBotTeleopMecanums)
   private PIDFController launchController;
+  // PID values taken from constants
   private double actualVelocity = 0;
   private double LAUNCHER_DESIRED_VELOCITY = 0;
 
@@ -51,8 +56,9 @@ public class RedCloseAuto extends OpMode {
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
-    // control point from RedSideClose.pp: (117,113)
-    scorePath = new Path(new BezierCurve(startPose, new Pose(117, 113, 0), scorePose));
+    // Mirrored control point from BlueCloseAuto: (64.035, 66.857) -> (144 - 64.035, 66.857)
+    scorePath = new Path(new BezierCurve(startPose, new Pose(79.965, 66.857), scorePose));
+    // ensure heading interpolates linearly between start and end headings
     scorePath.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
   }
 
@@ -66,14 +72,15 @@ public class RedCloseAuto extends OpMode {
       case 1:
         // Wait until follower completes, then begin shooting routine
         if (!follower.isBusy()) {
-          setPathState(2);
+          setPathState(2); // begin spin-up
         }
         break;
       case 2:
-        // Spin up launcher using closed-loop
+        // Spin up launcher using closed-loop PIDF to the desired velocity
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
+        // Feed immediately once the launcher reports being at-or-above the minimum velocity
         if (launcher != null
-                && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
+            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
           feederTimer.reset();
           leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
           rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -81,11 +88,13 @@ public class RedCloseAuto extends OpMode {
         }
         break;
       case 3:
+        // Feeding - run feeders for FEED_TIME_SECONDS, then stop and count a shot
         if (feederTimer.seconds() >= Constants.Launcher.FEED_TIME_SECONDS) {
           leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
           rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
           shotsFired++;
           if (shotsFired >= Constants.Launcher.TOTAL_SHOTS) {
+            // done shooting
             LAUNCHER_DESIRED_VELOCITY = 0;
             if (launcher != null) launcher.setPower(0);
             setPathState(4);
@@ -97,13 +106,14 @@ public class RedCloseAuto extends OpMode {
         }
         break;
       case 4:
-        // finished
+        // finished - idle
         break;
       case 5:
         // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
         if (interShotTimer != null
-                && interShotTimer.getElapsedTimeSeconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
-          setPathState(2);
+            && interShotTimer.getElapsedTimeSeconds()
+                >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
+          setPathState(2); // go back to spin-up (closed-loop) and then feed when ready
         }
         break;
       default:
@@ -111,42 +121,48 @@ public class RedCloseAuto extends OpMode {
     }
   }
 
+  /**
+   * These change the states of the paths and actions. It will also reset the timers of the
+   * individual switches *
+   */
   public void setPathState(int pState) {
     pathState = pState;
     if (pathTimer != null) pathTimer.resetTimer();
   }
 
+  /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". * */
   @Override
   public void loop() {
-    // loop follower and update states
+
+    // These loop the movements of the robot, these must be called continuously in order to work
     if (follower != null) follower.update();
     autonomousPathUpdate();
 
-    // Update battery voltage periodically
+    // Update battery voltage periodically (small overhead)
     if (voltageTimer != null && voltageTimer.seconds() >= 1.0) {
       batteryVoltage = getBatteryVoltage();
       voltageTimer.reset();
     }
 
-    // Closed-loop launcher velocity control
+    // Closed-loop launcher velocity control (if controller present)
     if (launcher != null && launchController != null) {
       actualVelocity = launcher.getVelocity();
-      if (!(LAUNCHER_DESIRED_VELOCITY == 0 && actualVelocity < 100)) {
+      if (!(LAUNCHER_DESIRED_VELOCITY == 0)) {
         double power =
-                (MathUtils.clamp(
+            (MathUtils.clamp(
                         (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
-                                + Constants.Launcher.Ks),
+                            + Constants.Launcher.Ks),
                         -1,
                         1)
-                        * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
-                        / Math.max(1e-6, batteryVoltage);
+                    * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
+                / batteryVoltage;
         launcher.setPower(power);
       } else {
         launcher.setPower(0);
       }
     }
 
-    // Telemetry
+    // Feedback to Driver Hub for debugging
     telemetry.addData("path state", pathState);
     if (follower != null && follower.getPose() != null) {
       telemetry.addData("x", follower.getPose().getX());
@@ -160,6 +176,7 @@ public class RedCloseAuto extends OpMode {
     telemetry.update();
   }
 
+  /** This method is called once at the init of the OpMode. * */
   @Override
   public void init() {
     pathTimer = new Timer();
@@ -173,41 +190,53 @@ public class RedCloseAuto extends OpMode {
     buildPaths();
     follower.setStartingPose(startPose);
 
+    // Map launcher hardware (use same names as TeleOp)
     try {
       launcher = hardwareMap.get(DcMotorEx.class, "launcher");
       leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
       rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
 
+      // configure launcher encoder mode and zero power behavior
       launcher.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
       launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
       launcher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
+      // feeders initial state
       leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
       rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
       leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
 
+      // initialize PIDF controller and voltage sensors for closed-loop control
       launchController =
-              new PIDFController(
-                      Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+          new PIDFController(
+              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
       voltageSensors = hardwareMap.getAll(VoltageSensor.class);
       batteryVoltage = getBatteryVoltage();
     } catch (Exception e) {
       telemetry.addData("Launcher init error", e.getMessage());
     }
 
+    // reset shot counter
     shotsFired = 0;
-    pathState = -1;
+    pathState = -1; // don't start until play
   }
 
+  /** This method is called continuously after Init while waiting for "play". * */
   @Override
   public void init_loop() {}
 
+  /**
+   * This method is called once at the start of the OpMode. It runs all the setup actions, including
+   * building paths and starting the path system *
+   */
   @Override
   public void start() {
     opmodeTimer.resetTimer();
+    // begin autonomous path + shoot sequence
     setPathState(0);
   }
 
+  /** We do not use this because everything should automatically disable * */
   @Override
   public void stop() {
     if (launcher != null) launcher.setPower(0);
@@ -215,6 +244,7 @@ public class RedCloseAuto extends OpMode {
     if (rightFeeder != null) rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
   }
 
+  // Helper: read battery voltage (copied from TeleOp helper)
   private double getBatteryVoltage() {
     if (voltageSensors == null || voltageSensors.isEmpty())
       return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
@@ -223,7 +253,9 @@ public class RedCloseAuto extends OpMode {
       double v = vs.getVoltage();
       if (v > 0) minV = Math.min(minV, v);
     }
-    if (minV == Double.POSITIVE_INFINITY) return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
+    if (minV == Double.POSITIVE_INFINITY) {
+      return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
+    }
     return minV;
   }
 }
