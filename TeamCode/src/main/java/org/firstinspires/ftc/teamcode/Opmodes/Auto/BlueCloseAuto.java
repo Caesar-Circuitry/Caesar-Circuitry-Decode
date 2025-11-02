@@ -7,10 +7,9 @@ import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierCurve;
+import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
-import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -25,14 +24,16 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 @Autonomous(name = "BlueCloseAuto")
 public class BlueCloseAuto extends OpMode {
   private Follower follower;
-  private Timer pathTimer, opmodeTimer, interShotTimer;
+  // Use ElapsedTime for simple timer operations to match FTC API
+  private ElapsedTime pathTimer, opmodeTimer, interShotTimer;
   private int pathState;
 
   // Values taken from Config/paths/BlueSideClose.pp
   private final Pose startPose = new Pose(63.692, 135.771, Math.toRadians(90));
-  private final Pose scorePose = new Pose(26, 126, Math.toRadians(146));
+  private final Pose scorePose = new Pose(26, 126, Math.toRadians(90));
 
-  private Path scorePath;
+  // path to run after all shots are fired
+  private Path postShotPath;
 
   // Launcher hardware and shooting state
   private DcMotorEx launcher;
@@ -55,16 +56,13 @@ public class BlueCloseAuto extends OpMode {
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
-    scorePath = new Path(new BezierCurve(startPose, new Pose(64.035, 66.857), scorePose));
-    // ensure heading interpolates linearly between start and end headings
-    scorePath.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
+    postShotPath = new Path(new BezierLine(new Pose(26.000, 126.000), new Pose(62.000, 131.000)));
+    postShotPath.setLinearHeadingInterpolation(Math.toRadians(146), Math.toRadians(270));
   }
 
   public void autonomousPathUpdate() {
     switch (pathState) {
       case 0:
-        // start following the built path
-        follower.followPath(scorePath);
         setPathState(1);
         break;
       case 1:
@@ -95,22 +93,26 @@ public class BlueCloseAuto extends OpMode {
             // done shooting
             LAUNCHER_DESIRED_VELOCITY = 0;
             if (launcher != null) launcher.setPower(0);
+            // start the requested path after all shots are fired
+            if (postShotPath != null && follower != null) {
+              follower.followPath(postShotPath);
+            }
             setPathState(4);
           } else {
             // start inter-shot pause to allow flywheel to spin up again before next feed
-            if (interShotTimer != null) interShotTimer.resetTimer();
+            if (interShotTimer != null) interShotTimer.reset();
             setPathState(5);
           }
         }
         break;
       case 4:
-        // finished - idle
+        // post-shot: either waiting for the postShotPath to finish or idle if none
+        // (no action required here; follower.isBusy() will be false once complete)
         break;
       case 5:
         // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
         if (interShotTimer != null
-            && interShotTimer.getElapsedTimeSeconds()
-                >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
+            && interShotTimer.seconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
           setPathState(2); // go back to spin-up (closed-loop) and then feed when ready
         }
         break;
@@ -125,7 +127,7 @@ public class BlueCloseAuto extends OpMode {
    */
   public void setPathState(int pState) {
     pathState = pState;
-    if (pathTimer != null) pathTimer.resetTimer();
+    if (pathTimer != null) pathTimer.reset();
   }
 
   /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". * */
@@ -174,15 +176,15 @@ public class BlueCloseAuto extends OpMode {
     telemetry.update();
   }
 
-  /** This method is called once at the init of the OpMode. * */
+  /** This is the method called once at the init of the OpMode. * */
   @Override
   public void init() {
-    pathTimer = new Timer();
-    opmodeTimer = new Timer();
-    interShotTimer = new Timer();
+    pathTimer = new ElapsedTime();
+    opmodeTimer = new ElapsedTime();
+    interShotTimer = new ElapsedTime();
     feederTimer = new ElapsedTime();
     voltageTimer = new ElapsedTime();
-    opmodeTimer.resetTimer();
+    opmodeTimer.reset();
 
     follower = PedroConstants.createFollower(hardwareMap);
     buildPaths();
@@ -229,7 +231,7 @@ public class BlueCloseAuto extends OpMode {
    */
   @Override
   public void start() {
-    opmodeTimer.resetTimer();
+    opmodeTimer.reset();
     // begin autonomous path + shoot sequence
     setPathState(0);
   }
@@ -249,11 +251,9 @@ public class BlueCloseAuto extends OpMode {
     double minV = Double.POSITIVE_INFINITY;
     for (VoltageSensor vs : voltageSensors) {
       double v = vs.getVoltage();
-      if (v > 0) minV = Math.min(minV, v);
+      if (v <= 0) continue; // ignore invalid readings
+      if (v < minV) minV = v;
     }
-    if (minV == Double.POSITIVE_INFINITY) {
-      return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
-    }
-    return minV;
+    return (minV == Double.POSITIVE_INFINITY) ? Constants.Launcher.NOMINAL_BATTERY_VOLTAGE : minV;
   }
 }

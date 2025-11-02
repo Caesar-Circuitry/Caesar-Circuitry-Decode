@@ -27,6 +27,7 @@ public class Constants {
     // feeder servo powers
     public static final double FEEDER_POWER = 1.0;
     public static final double FEEDER_STOP = 0.0;
+    public static final double FEEDER_REVERSE = -0.35;
 
     // shared shot count used by autos
     public static final int TOTAL_SHOTS = 3;

@@ -157,10 +157,11 @@ public class StarterBotTeleopMecanums extends OpMode {
     // launcher speed control
     if (gamepad1.y) {
       LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
-    } else if (gamepad1.left_bumper) { // stop flywheel
+    } else if (gamepad1.square) { // stop flywheel
       LAUNCHER_DESIRED_VELOCITY = 0;
     }
-    if (gamepad1.square) {
+    if (gamepad1.left_bumper) {
+      LAUNCHER_DESIRED_VELOCITY = 0;
       brakeFlag = true;
     }
 
@@ -196,12 +197,16 @@ public class StarterBotTeleopMecanums extends OpMode {
         if (shotRequested) {
           launchState = LaunchState.SPIN_UP;
         }
+        leftFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
+        rightFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
         break;
       case SPIN_UP:
         LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
         if (actualVelocity > Constants.Launcher.MIN_VELOCITY) {
           launchState = LaunchState.LAUNCH;
         }
+        leftFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
+        rightFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
         break;
       case LAUNCH:
         leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
@@ -212,8 +217,8 @@ public class StarterBotTeleopMecanums extends OpMode {
       case LAUNCHING:
         if (feederTimer.seconds() > Constants.Launcher.FEED_TIME_SECONDS) {
           launchState = LaunchState.IDLE;
-          leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-          rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
+          leftFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
+          rightFeeder.setPower(Constants.Launcher.FEEDER_REVERSE);
         }
         break;
     }

@@ -7,9 +7,9 @@ import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
+import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
-import com.pedropathing.util.Timer;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -24,7 +24,8 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 @Autonomous(name = "RedCloseAuto")
 public class RedCloseAuto extends OpMode {
   private Follower follower;
-  private Timer pathTimer, opmodeTimer, interShotTimer;
+  // use ElapsedTime instead of Pedro Timer
+  private ElapsedTime pathTimer, opmodeTimer, interShotTimer;
   private int pathState;
 
   // Mirrored values from BlueCloseAuto: x' = 144 - x, heading' = PI - heading
@@ -33,7 +34,8 @@ public class RedCloseAuto extends OpMode {
   private final Pose scorePose =
       new Pose(118.0, 126, Math.PI - Math.toRadians(146)); // mirrored score
 
-  private Path scorePath;
+  // post-shot path to mirror BlueCloseAuto behavior
+  private Path postShotPath;
 
   // Launcher hardware and shooting state
   private DcMotorEx launcher;
@@ -56,17 +58,18 @@ public class RedCloseAuto extends OpMode {
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
-    // Mirrored control point from BlueCloseAuto: (64.035, 66.857) -> (144 - 64.035, 66.857)
-    scorePath = new Path(new BezierCurve(startPose, new Pose(79.965, 66.857), scorePose));
-    // ensure heading interpolates linearly between start and end headings
-    scorePath.setLinearHeadingInterpolation(startPose.getHeading(), scorePose.getHeading());
+    postShotPath = new Path(new BezierCurve(
+            new Pose(118.000, 126.000), // start
+            new Pose(100.000, 128.500), // control point
+            new Pose(82.000, 131.000)   // end
+    ));
+    postShotPath.setLinearHeadingInterpolation(Math.toRadians(34), Math.toRadians(35));
   }
 
   public void autonomousPathUpdate() {
     switch (pathState) {
       case 0:
         // start following the built path
-        follower.followPath(scorePath);
         setPathState(1);
         break;
       case 1:
@@ -97,22 +100,25 @@ public class RedCloseAuto extends OpMode {
             // done shooting
             LAUNCHER_DESIRED_VELOCITY = 0;
             if (launcher != null) launcher.setPower(0);
+            // start the requested post-shot path (mirrored) if available
+            if (postShotPath != null && follower != null) {
+              follower.followPath(postShotPath);
+            }
             setPathState(4);
           } else {
             // start inter-shot pause to allow flywheel to spin up again before next feed
-            if (interShotTimer != null) interShotTimer.resetTimer();
+            if (interShotTimer != null) interShotTimer.reset();
             setPathState(5);
           }
         }
         break;
       case 4:
-        // finished - idle
+        // finished/post-shot: idle or waiting for follower to complete
         break;
       case 5:
         // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
         if (interShotTimer != null
-            && interShotTimer.getElapsedTimeSeconds()
-                >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
+            && interShotTimer.seconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
           setPathState(2); // go back to spin-up (closed-loop) and then feed when ready
         }
         break;
@@ -127,7 +133,7 @@ public class RedCloseAuto extends OpMode {
    */
   public void setPathState(int pState) {
     pathState = pState;
-    if (pathTimer != null) pathTimer.resetTimer();
+    if (pathTimer != null) pathTimer.reset();
   }
 
   /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". * */
@@ -179,12 +185,13 @@ public class RedCloseAuto extends OpMode {
   /** This method is called once at the init of the OpMode. * */
   @Override
   public void init() {
-    pathTimer = new Timer();
-    opmodeTimer = new Timer();
-    interShotTimer = new Timer();
+    // use ElapsedTime for all timers
+    pathTimer = new ElapsedTime();
+    opmodeTimer = new ElapsedTime();
+    interShotTimer = new ElapsedTime();
     feederTimer = new ElapsedTime();
     voltageTimer = new ElapsedTime();
-    opmodeTimer.resetTimer();
+    opmodeTimer.reset();
 
     follower = PedroConstants.createFollower(hardwareMap);
     buildPaths();
@@ -231,7 +238,7 @@ public class RedCloseAuto extends OpMode {
    */
   @Override
   public void start() {
-    opmodeTimer.resetTimer();
+    opmodeTimer.reset();
     // begin autonomous path + shoot sequence
     setPathState(0);
   }
