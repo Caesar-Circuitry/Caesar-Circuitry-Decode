@@ -7,7 +7,6 @@ import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierCurve;
-import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
@@ -58,11 +57,13 @@ public class RedCloseAuto extends OpMode {
   private ElapsedTime voltageTimer;
 
   public void buildPaths() {
-    postShotPath = new Path(new BezierCurve(
-            new Pose(118.000, 126.000), // start
-            new Pose(100.000, 128.500), // control point
-            new Pose(82.000, 131.000)   // end
-    ));
+    postShotPath =
+        new Path(
+            new BezierCurve(
+                new Pose(118.000, 126.000), // start
+                new Pose(100.000, 128.500), // control point
+                new Pose(82.000, 131.000) // end
+                ));
     postShotPath.setLinearHeadingInterpolation(Math.toRadians(34), Math.toRadians(35));
   }
 

@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import java.util.List;
 
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
@@ -10,6 +11,8 @@ import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.Path;
+import com.qualcomm.hardware.limelightvision.LLResult;
+import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.hardware.CRServo;
@@ -23,6 +26,8 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 
 @Autonomous(name = "BlueCloseAuto")
 public class BlueCloseAuto extends OpMode {
+  Limelight3A limelight;
+
   private Follower follower;
   // Use ElapsedTime for simple timer operations to match FTC API
   private ElapsedTime pathTimer, opmodeTimer, interShotTimer;
@@ -63,11 +68,16 @@ public class BlueCloseAuto extends OpMode {
   public void autonomousPathUpdate() {
     switch (pathState) {
       case 0:
+        // Start following the pre-built path so the robot actually moves.
+        // We use postShotPath (already defined in buildPaths) to avoid changing any path geometry.
+        if (follower != null && postShotPath != null) {
+          follower.followPath(postShotPath);
+        }
         setPathState(1);
         break;
       case 1:
-        // Wait until follower completes, then begin shooting routine
-        if (!follower.isBusy()) {
+        // Wait until follower completes (or if follower missing), then begin shooting routine
+        if (follower == null || !follower.isBusy()) {
           setPathState(2); // begin spin-up
         }
         break;
@@ -174,6 +184,32 @@ public class BlueCloseAuto extends OpMode {
     telemetry.addData("launcherDesired", LAUNCHER_DESIRED_VELOCITY);
     telemetry.addData("batteryV", batteryVoltage);
     telemetry.update();
+
+    // Guard limelight and follower usage to avoid runtime NPEs if either device fails to init
+    LLResult result = (limelight != null) ? limelight.getLatestResult() : null;
+    if (result != null && result.isValid()) {
+      double tx = result.getTx(); // How far left or right the target is (degrees)
+      double ty = result.getTy(); // How far up or down the target is (degrees)
+      double ta = result.getTa(); // How big the target looks (0%-100% of the image)
+
+      telemetry.addData("Target X", tx);
+      telemetry.addData("Target Y", ty);
+      telemetry.addData("Target Area", ta);
+    } else {
+      telemetry.addData("Limelight", "No Targets");
+    }
+
+    // First, tell Limelight which way your robot is facing (safe: default to 0 if follower missing)
+    double robotYaw = (follower != null) ? follower.getHeading() : 0.0;
+    if (limelight != null) limelight.updateRobotOrientation(robotYaw);
+    if (result != null && result.isValid()) {
+      Pose3D botpose_mt2 = result.getBotpose_MT2();
+      if (botpose_mt2 != null) {
+        double x = botpose_mt2.getPosition().x;
+        double y = botpose_mt2.getPosition().y;
+        telemetry.addData("MT2 Location:", "(" + x + ", " + y + ")");
+      }
+    }
   }
 
   /** This is the method called once at the init of the OpMode. * */
@@ -186,35 +222,36 @@ public class BlueCloseAuto extends OpMode {
     voltageTimer = new ElapsedTime();
     opmodeTimer.reset();
 
+    limelight = hardwareMap.get(Limelight3A.class, "limelight");
+    limelight.setPollRateHz(
+        100); // This sets how often we ask Limelight for data (100 times per second)
+    limelight.start(); // This tells Limelight to start looking!
+
     follower = PedroConstants.createFollower(hardwareMap);
     buildPaths();
     follower.setStartingPose(startPose);
 
     // Map launcher hardware (use same names as TeleOp)
-    try {
-      launcher = hardwareMap.get(DcMotorEx.class, "launcher");
-      leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
-      rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
 
-      // configure launcher encoder mode and zero power behavior
-      launcher.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-      launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-      launcher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
+    launcher = hardwareMap.get(DcMotorEx.class, "launcher");
+    leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
+    rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
 
-      // feeders initial state
-      leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-      rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-      leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
+    // configure launcher encoder mode and zero power behavior
+    launcher.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
+    launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
+    launcher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
 
-      // initialize PIDF controller and voltage sensors for closed-loop control
-      launchController =
-          new PIDFController(
-              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
-      voltageSensors = hardwareMap.getAll(VoltageSensor.class);
-      batteryVoltage = getBatteryVoltage();
-    } catch (Exception e) {
-      telemetry.addData("Launcher init error", e.getMessage());
-    }
+    // feeders initial state
+    leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
+    rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
+    leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
+
+    // initialize PIDF controller and voltage sensors for closed-loop control
+    launchController =
+        new PIDFController(Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
+    voltageSensors = hardwareMap.getAll(VoltageSensor.class);
+    batteryVoltage = getBatteryVoltage();
 
     // reset shot counter
     shotsFired = 0;
