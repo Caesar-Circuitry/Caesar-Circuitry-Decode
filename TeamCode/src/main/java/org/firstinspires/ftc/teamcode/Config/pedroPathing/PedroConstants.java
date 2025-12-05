@@ -18,8 +18,8 @@ public class PedroConstants {
   public static FollowerConstants followerConstants =
       new FollowerConstants()
           .mass(8.8)
-          .forwardZeroPowerAcceleration(-30.87677105808023)
-          .lateralZeroPowerAcceleration(-53.42890182464926)
+          .forwardZeroPowerAcceleration(-30.4571698665302)
+          .lateralZeroPowerAcceleration(-65.82404523256889)
           .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0.0, 0.0, 0.0))
           .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.01))
           .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.005, 0, 0, 0, 0.051))
@@ -35,8 +35,8 @@ public class PedroConstants {
           .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
           .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
           .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-          .xVelocity(73.3870599016487)
-          .yVelocity(48.436596487450785);
+          .xVelocity(78.88153412586122)
+          .yVelocity(63.368909940944874);
 
   public static PinpointConstants localizerConstants =
       new PinpointConstants()
