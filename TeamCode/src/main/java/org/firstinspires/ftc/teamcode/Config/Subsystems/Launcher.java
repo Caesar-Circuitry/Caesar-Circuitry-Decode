@@ -1,69 +1,70 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
-import com.qualcomm.robotcore.hardware.AnalogInput;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
+import org.firstinspires.ftc.teamcode.Config.Constants;
+
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
+import com.seattlesolvers.solverslib.hardware.motors.Motor;
+import com.seattlesolvers.solverslib.hardware.motors.MotorEx;
+import com.seattlesolvers.solverslib.hardware.motors.MotorGroup;
 
-public class Launcher extends WSubsystem{
+public class Launcher extends WSubsystem {
 
-    private DcMotorEx FlywheelMotorLead;
-    private DcMotorEx FlywheelMotorFollow;
+  private MotorGroup Flywheel;
+  private MotorEx FlywheelLead;
+  private MotorEx FlywheelFollow;
 
-    private CRServo turretServoLead;
-    private CRServo turretServoFollow;
+  private double flywheelVelocity = 0.0;
+  private double flywheelTargetVelocity = 0.0; // Ticks per second max is 2800 for bare motor
+  private double speed; // keep this fully hidden used for calculations only
 
-    private AnalogInput turretServoLeadEncoder;
-    private AnalogInput turretServoFollowEncoder;
+  public Launcher(HardwareMap hardwareMap) {
+    FlywheelLead =
+        new MotorEx(hardwareMap, Constants.Launcher.FLYWHEEL_MOTOR_LEAD, Motor.GoBILDA.BARE);
+    FlywheelFollow =
+        new MotorEx(hardwareMap, Constants.Launcher.FLYWHEEL_MOTOR_FOLLOW, Motor.GoBILDA.BARE);
 
-    private double FlywheelMotorLeadPower = 0.0;
-    private double FlywheelMotorFollowPower = 0.0;
-    private double turretServoLeadPower = 0.0;
-    private double turretServoFollowPower = 0.0;
+    FlywheelLead.setInverted(Constants.Launcher.FLYWHEEL_MOTOR_LEAD_INVERTED);
+    FlywheelFollow.setInverted(Constants.Launcher.FLYWHEEL_MOTOR_FOLLOW_INVERTED);
 
-    public enum Direction {
-        FORWARD,
-        REVERSE
-    }
+    Flywheel = new MotorGroup(FlywheelLead, FlywheelFollow);
+    Flywheel.setZeroPowerBehavior(Motor.ZeroPowerBehavior.FLOAT);
+    Flywheel.stopAndResetEncoder();
+    Flywheel.setRunMode(Motor.RunMode.VelocityControl);
 
+    Flywheel.setVeloCoefficients(
+        Constants.Launcher.kP, Constants.Launcher.kI, Constants.Launcher.kD);
+    Flywheel.setFeedforwardCoefficients(
+        Constants.Launcher.kS, Constants.Launcher.kV, Constants.Launcher.kA);
+  }
 
-    public Launcher(HardwareMap hardwareMap) {
-        FlywheelMotorLead = hardwareMap.get(DcMotorEx.class, "FlywheelMotorLead");
-        FlywheelMotorFollow = hardwareMap.get(DcMotorEx.class, "FlywheelMotorFollow");
+  @Override
+  public void read() {
+    this.flywheelVelocity = Flywheel.getVelocity();
+  }
 
-        turretServoLead = hardwareMap.get(CRServo.class, "turretServoLead");
-        turretServoFollow = hardwareMap.get(CRServo.class, "turretServoFollow");
+  @Override
+  public void loop() {
+    speed = this.flywheelTargetVelocity / Flywheel.ACHIEVABLE_MAX_TICKS_PER_SECOND;
+  }
 
-        turretServoLeadEncoder = hardwareMap.get(AnalogInput.class, "turretServoLeadEncoder");
-        turretServoFollowEncoder = hardwareMap.get(AnalogInput.class, "turretServoFollowEncoder");
+  @Override
+  public void write() {
+    Flywheel.set(speed);
+  }
 
-        FlywheelMotorFollow.setDirection(DcMotorSimple.Direction.REVERSE);
-        turretServoFollow.setDirection(DcMotorSimple.Direction.REVERSE);
+  public double getFlywheelTargetVelocity() {
+    return flywheelTargetVelocity;
+  }
 
-    }
+  public void setFlywheelTargetVelocity(double flywheelTargetVelocity) {
+    this.flywheelTargetVelocity = flywheelTargetVelocity;
+  }
 
-    @Override
-    public void read() {
+  public double getFlywheelVelocity() {
+    return flywheelVelocity;
+  }
 
-    }
-
-    @Override
-    public void loop() {
-
-    }
-
-    @Override
-    public void write() {
-        FlywheelMotorLead.setPower(FlywheelMotorLeadPower);
-        FlywheelMotorFollow.setPower(FlywheelMotorFollowPower);
-        turretServoLead.setPower(turretServoLeadPower);
-        turretServoFollow.setPower(turretServoFollowPower);
-    }
-
-    public double getCurrentAngle(AnalogInput servoEncoder) {
-        if (servoEncoder == null) return 0;
-        return (servoEncoder.getVoltage() / 3.3) * (direction.equals(DcMotorSimple.Direction.REVERSE) ? -360 : 360);
-    }
+  public void setFlywheelVelocity(double flywheelVelocity) {
+    this.flywheelVelocity = flywheelVelocity;
+  }
 }

@@ -1,5 +1,10 @@
 package org.firstinspires.ftc.teamcode.Config.Utils;
 
+import java.util.List;
+
+import org.firstinspires.ftc.robotcore.external.Telemetry;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
+
 import com.qualcomm.hardware.limelightvision.LLFieldMap;
 import com.qualcomm.hardware.limelightvision.LLResult;
 import com.qualcomm.hardware.limelightvision.LLResultTypes;
@@ -7,13 +12,6 @@ import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.controller.PIDController;
-
-import org.firstinspires.ftc.robotcore.external.Telemetry;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
-
-import java.util.List;
-
-
 
 public class LimelightHelper {
 
@@ -38,12 +36,15 @@ public class LimelightHelper {
   // ==========================
 
   /**
-   * New constructor: accept a PedroLocalizer and optional PIDController instances.
-   * If a PIDController is not provided, movement methods will use simple fallbacks.
+   * New constructor: accept a PedroLocalizer and optional PIDController instances. If a
+   * PIDController is not provided, movement methods will use simple fallbacks.
    */
-  public LimelightHelper(HardwareMap hardwareMap, String cameraName,
-                         PedroLocalizer pedroLocalizer,
-                         PIDController distancePID, PIDController yawPID) {
+  public LimelightHelper(
+      HardwareMap hardwareMap,
+      String cameraName,
+      PedroLocalizer pedroLocalizer,
+      PIDController distancePID,
+      PIDController yawPID) {
     this.limelight = hardwareMap.get(Limelight3A.class, cameraName);
     this.pedroLocalizer = pedroLocalizer;
     this.distancePID = distancePID;
@@ -101,10 +102,9 @@ public class LimelightHelper {
     if (fiducial != null) {
       Pose3D robotPose = fiducial.getRobotPoseTargetSpace();
       return Math.sqrt(
-              robotPose.getPosition().x * robotPose.getPosition().x +
-                      robotPose.getPosition().y * robotPose.getPosition().y +
-                      robotPose.getPosition().z * robotPose.getPosition().z
-      );
+          robotPose.getPosition().x * robotPose.getPosition().x
+              + robotPose.getPosition().y * robotPose.getPosition().y
+              + robotPose.getPosition().z * robotPose.getPosition().z);
     }
     return -1;
   }
@@ -122,10 +122,10 @@ public class LimelightHelper {
   public double getPitchToFiducial(LLResultTypes.FiducialResult fiducial) {
     if (fiducial != null) {
       Pose3D robotPose = fiducial.getRobotPoseTargetSpace();
-      double horizontalDist = Math.sqrt(
-              robotPose.getPosition().x * robotPose.getPosition().x +
-                      robotPose.getPosition().y * robotPose.getPosition().y
-      );
+      double horizontalDist =
+          Math.sqrt(
+              robotPose.getPosition().x * robotPose.getPosition().x
+                  + robotPose.getPosition().y * robotPose.getPosition().y);
       return Math.toDegrees(Math.atan2(robotPose.getPosition().z, horizontalDist));
     }
     return 0;
@@ -153,13 +153,19 @@ public class LimelightHelper {
     public double x;
     public double y;
     public double heading; // radians
-    public PedroPose2d(double x, double y, double heading) { this.x = x; this.y = y; this.heading = heading; }
+
+    public PedroPose2d(double x, double y, double heading) {
+      this.x = x;
+      this.y = y;
+      this.heading = heading;
+    }
   }
 
   /** Minimal Pedro localizer interface so any Pedro localization source can be injected. */
   public interface PedroLocalizer {
-    PedroPose2d getPose();          // may return null
-    boolean update();               // optional update call, return true if pose available
+    PedroPose2d getPose(); // may return null
+
+    boolean update(); // optional update call, return true if pose available
   }
 
   // ==========================
@@ -170,10 +176,12 @@ public class LimelightHelper {
   public void telemetryFull(Telemetry telemetry) {
     Pose3D fieldPose = getEstimatedFieldPosition();
     if (fieldPose != null) {
-      telemetry.addData("Robot (Field)", "X: %.2f Y: %.2f Z: %.2f",
-              fieldPose.getPosition().x,
-              fieldPose.getPosition().y,
-              fieldPose.getPosition().z);
+      telemetry.addData(
+          "Robot (Field)",
+          "X: %.2f Y: %.2f Z: %.2f",
+          fieldPose.getPosition().x,
+          fieldPose.getPosition().y,
+          fieldPose.getPosition().z);
     }
 
     List<LLResultTypes.FiducialResult> fiducials = getFiducials();
@@ -182,12 +190,12 @@ public class LimelightHelper {
         double dist = getDistanceToFiducial(f);
         double yaw = getYawToFiducial(f);
         double pitch = getPitchToFiducial(f);
-        telemetry.addData("Fiducial " + f.getFiducialId(),
-                String.format("Dist: %.2fm Yaw: %.1f° Pitch: %.1f°", dist, yaw, pitch));
+        telemetry.addData(
+            "Fiducial " + f.getFiducialId(),
+            String.format("Dist: %.2fm Yaw: %.1f° Pitch: %.1f°", dist, yaw, pitch));
       }
     }
   }
-
 
   // ==========================
   // MOVEMENT CALCULATIONS
@@ -195,11 +203,12 @@ public class LimelightHelper {
 
   /**
    * Calculates the direction and speed required to move to a target field position.
+   *
    * @return array [vForward, vStrafe, vRot]
    */
   public double[] calculateMovementToPosition(double xTarget, double yTarget, double dtSeconds) {
     Pose3D currentPose = getEstimatedFieldPosition();
-    if (currentPose == null) return new double[]{0, 0, 0};
+    if (currentPose == null) return new double[] {0, 0, 0};
 
     double dx = xTarget - currentPose.getPosition().x;
     double dy = yTarget - currentPose.getPosition().y;
@@ -216,8 +225,11 @@ public class LimelightHelper {
     lastDistanceError = distance;
     double vForward;
     if (distancePID != null) {
-      // many PIDController APIs accept (setpoint, measurement) — adjust calls as needed in your project
-      vForward = distancePID.calculate(0.0, -distance); // fallback usage: negative distance toward setpoint 0
+      // many PIDController APIs accept (setpoint, measurement) — adjust calls as needed in your
+      // project
+      vForward =
+          distancePID.calculate(
+              0.0, -distance); // fallback usage: negative distance toward setpoint 0
     } else {
       vForward = distance * 0.5; // simple proportional fallback
     }
@@ -237,7 +249,7 @@ public class LimelightHelper {
     vForward = Math.min(vForward, 1);
     vRot = Math.max(Math.min(vRot, 1), -1);
 
-    return new double[]{vForward, 0, vRot}; // [forward, strafe (0 for tank), rotation]
+    return new double[] {vForward, 0, vRot}; // [forward, strafe (0 for tank), rotation]
   }
 
   // normalize to [-180,180]
@@ -251,7 +263,10 @@ public class LimelightHelper {
   // PEDRO PATHING ADAPTERS
   // ==========================
 
-  /** Returns a PedroPose2d using the injected PedroLocalizer when available, otherwise Limelight pose. */
+  /**
+   * Returns a PedroPose2d using the injected PedroLocalizer when available, otherwise Limelight
+   * pose.
+   */
   public PedroPose2d getPedroPose2d() {
     if (pedroLocalizer != null) return pedroLocalizer.getPose();
     Pose3D fieldPose = getEstimatedFieldPosition();
@@ -262,8 +277,8 @@ public class LimelightHelper {
   }
 
   /**
-   * Minimal localizer adapter that exposes the Limelight as a Pedro-friendly localizer.
-   * The adapter is intentionally small: update() checks for new pose and getPose() returns the latest.
+   * Minimal localizer adapter that exposes the Limelight as a Pedro-friendly localizer. The adapter
+   * is intentionally small: update() checks for new pose and getPose() returns the latest.
    */
   public class LimelightPedroLocalizer implements PedroLocalizer {
     private PedroPose2d lastPose = null;
@@ -293,16 +308,16 @@ public class LimelightHelper {
   }
 
   /**
-   * Generates chassis velocities suitable for Pedro followers.
-   * Input targets are in field coordinates (meters). Output is robot-frame velocities:
-   * [vx (m/s forward), vy (m/s strafe to the right), omega (rad/s CCW)]
+   * Generates chassis velocities suitable for Pedro followers. Input targets are in field
+   * coordinates (meters). Output is robot-frame velocities: [vx (m/s forward), vy (m/s strafe to
+   * the right), omega (rad/s CCW)]
    *
-   * This reuses the existing PID approach but rotates the forward/strafe into robot frame
-   * using the IMU yaw.
+   * <p>This reuses the existing PID approach but rotates the forward/strafe into robot frame using
+   * the IMU yaw.
    */
   public double[] getPedroDriveSignal(double xTarget, double yTarget, double dtSeconds) {
     Pose3D currentPose = getEstimatedFieldPosition();
-    if (currentPose == null) return new double[]{0, 0, 0};
+    if (currentPose == null) return new double[] {0, 0, 0};
 
     double dx = xTarget - currentPose.getPosition().x;
     double dy = yTarget - currentPose.getPosition().y;
@@ -311,7 +326,8 @@ public class LimelightHelper {
     double robotYawRad = 0.0;
     PedroPose2d p = (pedroLocalizer != null) ? pedroLocalizer.getPose() : null;
     if (p != null) robotYawRad = p.heading;
-    double yawErrorDeg = normalizeAngleDeg(Math.toDegrees(angleToTarget) - Math.toDegrees(robotYawRad));
+    double yawErrorDeg =
+        normalizeAngleDeg(Math.toDegrees(angleToTarget) - Math.toDegrees(robotYawRad));
 
     // distance PID (reuse previous integrators)
     distanceIntegral += distance * dtSeconds;
@@ -345,7 +361,7 @@ public class LimelightHelper {
     vy_robot = clamp(vy_robot, -2.0, 2.0);
     omega = clamp(omega, -Math.PI, Math.PI);
 
-    return new double[]{vx_robot, vy_robot, omega};
+    return new double[] {vx_robot, vy_robot, omega};
   }
 
   // ==========================
@@ -362,14 +378,13 @@ public class LimelightHelper {
     return limelight.isConnected();
   }
 
-
   // ==========================
   // PYTHON SNAP METHODS
   // ==========================
 
   /** Updates Python SnapScript inputs (8 values) */
-  public boolean updatePythonInputs(double i1, double i2, double i3, double i4,
-                                    double i5, double i6, double i7, double i8) {
+  public boolean updatePythonInputs(
+      double i1, double i2, double i3, double i4, double i5, double i6, double i7, double i8) {
     return limelight.updatePythonInputs(i1, i2, i3, i4, i5, i6, i7, i8);
   }
 
@@ -377,7 +392,6 @@ public class LimelightHelper {
   public boolean updatePythonInputs(double[] inputs) {
     return limelight.updatePythonInputs(inputs);
   }
-
 
   // ==========================
   // PIPELINE METHODS
@@ -403,7 +417,6 @@ public class LimelightHelper {
     return limelight.deleteSnapshot(name);
   }
 
-
   // ==========================
   // FIELD / ORIENTATION METHODS
   // ==========================
@@ -422,21 +435,30 @@ public class LimelightHelper {
     return limelight.uploadFieldmap(map, index);
   }
 
-
   // ==========================
   // POLLING CONTROL
   // ==========================
 
-  public void start() { limelight.start(); }
-  public void pause() { limelight.pause(); }
-  public void stop() { limelight.stop(); }
-  public boolean isRunning() { return limelight.isRunning(); }
+  public void start() {
+    limelight.start();
+  }
+
+  public void pause() {
+    limelight.pause();
+  }
+
+  public void stop() {
+    limelight.stop();
+  }
+
+  public boolean isRunning() {
+    return limelight.isRunning();
+  }
 
   /** Sets the polling rate in Hz */
   public void setPollRateHz(int hz) {
     limelight.setPollRateHz(hz);
   }
-
 
   // ==========================
   // LATENCY / PERFORMANCE INFO
@@ -456,7 +478,6 @@ public class LimelightHelper {
   public double getParseLatency() {
     return limelight.getLatestResult().getParseLatency();
   }
-
 
   // ==========================
   // FIDUCIAL UTILITIES
@@ -479,13 +500,13 @@ public class LimelightHelper {
     return closest.getFiducialId();
   }
 
-
   // ==========================
   // MOVEMENT SETUP & CONTROL
   // ==========================
 
   /** Configures the motors and provides PIDController instances for movement. */
-  public void setupMovement(DcMotor leftMotor, DcMotor rightMotor, PIDController distancePID, PIDController yawPID) {
+  public void setupMovement(
+      DcMotor leftMotor, DcMotor rightMotor, PIDController distancePID, PIDController yawPID) {
     this.leftMotor = leftMotor;
     this.rightMotor = rightMotor;
     this.distancePID = distancePID;
@@ -494,17 +515,23 @@ public class LimelightHelper {
 
   /**
    * Moves the robot (tank drive) toward a fiducial until it reaches the desired distance.
+   *
    * @return true if target distance is reached
    */
-  public boolean moveToFiducialByIdTank(int targetID, double desiredDistance, double maxPower, Telemetry telemetry) {
-    if (leftMotor == null || rightMotor == null || distancePID == null || yawPID == null) return false;
+  public boolean moveToFiducialByIdTank(
+      int targetID, double desiredDistance, double maxPower, Telemetry telemetry) {
+    if (leftMotor == null || rightMotor == null || distancePID == null || yawPID == null)
+      return false;
 
     List<LLResultTypes.FiducialResult> fiducials = getFiducials();
     if (fiducials == null || fiducials.isEmpty()) return false;
 
     LLResultTypes.FiducialResult target = null;
     for (LLResultTypes.FiducialResult f : fiducials) {
-      if (f.getFiducialId() == targetID) { target = f; break; }
+      if (f.getFiducialId() == targetID) {
+        target = f;
+        break;
+      }
     }
 
     double distance = getDistanceToFiducial(target);
@@ -549,22 +576,35 @@ public class LimelightHelper {
 
   /**
    * Moves the robot (mecanum drive) toward a fiducial until it reaches the desired distance.
+   *
    * @return true if target distance is reached
    */
-  public boolean moveToFiducialByIdMecanum(int targetID, DcMotor frontLeft, DcMotor frontRight,
-                                           DcMotor backLeft, DcMotor backRight,
-                                           double desiredDistance, double maxPower, Telemetry telemetry) {
+  public boolean moveToFiducialByIdMecanum(
+      int targetID,
+      DcMotor frontLeft,
+      DcMotor frontRight,
+      DcMotor backLeft,
+      DcMotor backRight,
+      double desiredDistance,
+      double maxPower,
+      Telemetry telemetry) {
 
-    if (frontLeft == null || frontRight == null || backLeft == null || backRight == null ||
-            distancePID == null || yawPID == null)
-      return false;
+    if (frontLeft == null
+        || frontRight == null
+        || backLeft == null
+        || backRight == null
+        || distancePID == null
+        || yawPID == null) return false;
 
     List<LLResultTypes.FiducialResult> fiducials = getFiducials();
     if (fiducials == null || fiducials.isEmpty()) return false;
 
     LLResultTypes.FiducialResult target = null;
     for (LLResultTypes.FiducialResult f : fiducials) {
-      if (f.getFiducialId() == targetID) { target = f; break; }
+      if (f.getFiducialId() == targetID) {
+        target = f;
+        break;
+      }
     }
     if (target == null) return false;
 
@@ -582,7 +622,8 @@ public class LimelightHelper {
     }
 
     // PID distance and yaw
-    double forwardPower = clamp(distancePID.calculate(desiredDistance, distanceError), -maxPower, maxPower);
+    double forwardPower =
+        clamp(distancePID.calculate(desiredDistance, distanceError), -maxPower, maxPower);
     double yawCorrection = yawPID.calculate(0, yawToTag);
 
     // Convert polar to Cartesian for mecanum drive
@@ -617,7 +658,6 @@ public class LimelightHelper {
 
     return false;
   }
-
 
   // ==========================
   // UTILITY

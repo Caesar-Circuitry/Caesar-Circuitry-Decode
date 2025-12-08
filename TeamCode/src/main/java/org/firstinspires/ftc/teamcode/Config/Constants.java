@@ -1,6 +1,7 @@
 package org.firstinspires.ftc.teamcode.Config;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 public class Constants {
   //    public static class insertSubsystemName {
@@ -9,30 +10,58 @@ public class Constants {
   //    }
   @Configurable
   public static class Launcher {
-    // shared launch/feeder constants used across opmodes
-    public static final double FEED_TIME_SECONDS = 0.20;
-    public static final double INTER_SHOT_PAUSE_SECONDS = 2;
-    public static final double COOLDOWN_TIME_SECONDS = 0.25;
 
-    // PIDF / controller gains used in autos & teleop (named to match existing usages)
-    public static final double Kp = 0.01;
-    public static final double Ki = 0.5;
-    public static final double Kd = 0.0;
-    public static final double Ks = 0.0431;
+    public static final String FLYWHEEL_MOTOR_LEAD = "FlywheelMotorLead";
+    public static final String FLYWHEEL_MOTOR_FOLLOW = "FlywheelMotorFollow";
 
-    // velocity targets / thresholds
-    public static final double TARGET_VELOCITY = 1000;
-    public static final double MIN_VELOCITY = 950;
+    public static final boolean FLYWHEEL_MOTOR_LEAD_INVERTED = false;
+    public static final boolean FLYWHEEL_MOTOR_FOLLOW_INVERTED = true;
 
-    // feeder servo powers
-    public static final double FEEDER_POWER = 1.0;
-    public static final double FEEDER_STOP = 0.0;
-    public static final double FEEDER_REVERSE = -0.35;
-
-    // shared shot count used by autos
-    public static final int TOTAL_SHOTS = 3;
-
-    // nominal battery voltage used for simple voltage compensation
-    public static final double NOMINAL_BATTERY_VOLTAGE = 12.0;
+    public static final double kP = 0.0;
+    public static final double kI = 0.0;
+    public static final double kD = 0.0;
+    public static final double kS = 0.0;
+    public static final double kV = 0.0;
+    public static final double kA = 0.0;
   }
+
+  @Configurable
+  public static class Intake {
+    public static final String INTAKE_MOTOR = "IntakeMotor";
+    public static final String TRANSFER_MOTOR = "TransferMotor";
+
+    public static final String FEEDER_SERVO = "FeederServo";
+
+    public static final String intakeBeamBreak = "intakeBeamBreak";
+    public static final String transferBeamBreak = "transferBeamBreak";
+
+    public static final double intakeOverCurrent = 6;
+    public static final double transferOverCurrent = 6;
+
+    public static final DcMotorSimple.Direction INTAKE_MOTOR_DIRECTION =
+        DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorSimple.Direction TRANSFER_MOTOR_DIRECTION =
+        DcMotorSimple.Direction.FORWARD;
+
+    public static final double FEEDER_SERVO_OPEN = 0.0;
+    public static final double FEEDER_SERVO_CLOSE = 0.0;
+
+    public static final double INTAKE_MOTOR_FORWARD = 1.0;
+    public static final double INTAKE_MOTOR_REVERSE = -1.0;
+    public static final double INTAKE_MOTOR_HOLD = 0;
+    public static final double INTAKE_MOTOR_HP = -1.0;
+
+    public static final double TRANSFER_MOTOR_FORWARD = 1.0;
+    public static final double TRANSFER_MOTOR_REVERSE = -1.0;
+    public static final double TRANSFER_MOTOR_HOLD = 0;
+    public static final double TRANSFER_MOTOR_HP = -1.0;
+  }
+  @Configurable
+  public static class Turret {
+      public static final double kP = 0;
+      public static final double kI = 0;
+      public static final double kD = 0;
+      public static final double kF = 0;
+  }
+
 }

@@ -15,6 +15,10 @@ repositories {
 }
 
 dependencies {
+    implementation "com.github.StateFactory-Dev:StateFactory:0.3.9"
+    implementation 'com.pedropathing:ftc:2.0.4'
+    implementation 'com.pedropathing:telemetry:1.0.0'
+    implementation "com.bylazar:fullpanels:1.0.10"
     implementation 'org.firstinspires.ftc:Inspection:11.0.0'
     implementation 'org.firstinspires.ftc:Blocks:11.0.0'
     //noinspection Aligned16KB
@@ -25,16 +29,12 @@ dependencies {
     implementation 'org.firstinspires.ftc:FtcCommon:11.0.0'
     implementation 'org.firstinspires.ftc:Vision:11.0.0'
 
-    implementation 'com.pedropathing:ftc:2.0.3'
-    implementation 'com.pedropathing:telemetry:1.0.0'
 
     implementation "org.solverslib:core:0.3.3" // core
     implementation "org.solverslib:pedroPathing:0.3.3"
 
 
-    implementation 'com.github.StateFactory-Dev:StateFactory:0.3.9'
 
-    implementation 'com.bylazar:fullpanels:1.0.8'
     //noinspection GradleDependency
     implementation 'androidx.appcompat:appcompat:1.2.0'
 }
