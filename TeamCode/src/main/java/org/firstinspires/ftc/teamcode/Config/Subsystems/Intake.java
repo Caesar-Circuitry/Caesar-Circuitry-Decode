@@ -2,7 +2,7 @@ package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.BeamBreak;
-import org.firstinspires.ftc.teamcode.Config.Utils.currentSensor;
+import org.firstinspires.ftc.teamcode.Config.Utils.CurrentSensor;
 
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -18,8 +18,8 @@ public class Intake extends WSubsystem {
   private BeamBreak intakeBeamBreak;
   private BeamBreak transferBeamBreak;
 
-  private currentSensor intakeCurrentSensor;
-  private currentSensor transferCurrentSensor;
+  private CurrentSensor intakeCurrentSensor;
+  private CurrentSensor transferCurrentSensor;
 
   private double intakeMotorTargetPower = 0;
   private double transferMotorTargetPower = 0;
@@ -52,9 +52,9 @@ public class Intake extends WSubsystem {
     intakeBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.intakeBeamBreak);
     transferBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.transferBeamBreak);
 
-    intakeCurrentSensor = new currentSensor(this.intakeMotor, Constants.Intake.intakeOverCurrent);
+    intakeCurrentSensor = new CurrentSensor(this.intakeMotor, Constants.Intake.intakeOverCurrent);
     transferCurrentSensor =
-        new currentSensor(this.transferMotor, Constants.Intake.transferOverCurrent);
+        new CurrentSensor(this.transferMotor, Constants.Intake.transferOverCurrent);
   }
 
   @Override

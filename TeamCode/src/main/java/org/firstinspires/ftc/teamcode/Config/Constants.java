@@ -56,12 +56,34 @@ public class Constants {
     public static final double TRANSFER_MOTOR_HOLD = 0;
     public static final double TRANSFER_MOTOR_HP = -1.0;
   }
+
   @Configurable
   public static class Turret {
-      public static final double kP = 0;
-      public static final double kI = 0;
-      public static final double kD = 0;
-      public static final double kF = 0;
-  }
+    public static final double kP = 0;
+    public static final double kI = 0;
+    public static final double kD = 0;
+    public static final double kF = 0;
 
+    public static final double GoalAngle = 144; // degrees
+    public static final double minAngle = -135; // degrees
+    public static final double maxAngle = 135; // degrees
+
+    public static final double TURRET_KF_MODEL_COVARIANCE = 0.01;
+    // How much we trust the model (Pinpoint robot heading)
+    // Smaller = trust odometry more
+
+    public static final double TURRET_KF_DATA_COVARIANCE = 6.0;
+    // How noisy the Limelight tx measurement is (deg^2)
+    // Higher = trust Limelight less
+
+    public static final double TURRET_KF_START_STATE = 0.0;
+    // Initial turret relative angle (deg)
+
+    public static final double TURRET_KF_START_VARIANCE = 16.0;
+    // Initial uncertainty (~4 deg standard deviation)
+
+    public static final double TURRET_KF_START_GAIN = 0.5;
+    // Initial Kalman gain (0–1)
+
+  }
 }

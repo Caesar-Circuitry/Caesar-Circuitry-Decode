@@ -23,7 +23,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
  * if (cs.isOverCurrent()) { ... }
  * </pre>
  */
-public class currentSensor {
+public class CurrentSensor {
   /** The wrapped {@link DcMotorEx} instance used to read current. */
   private DcMotorEx motor;
 
@@ -64,7 +64,7 @@ public class currentSensor {
    * @param currentMilis debounce time in milliseconds the current must stay >= {@code overcurrent}
    *     before {@link #isOverCurrent()} returns {@code true}
    */
-  public currentSensor(
+  public CurrentSensor(
       DcMotorEx motor, double overcurrent, CurrentUnit currentUnit, double currentMilis) {
     this.motor = motor;
     this.overcurrent = overcurrent;
@@ -82,7 +82,7 @@ public class currentSensor {
    * @param overcurrent the overcurrent threshold (in {@code currentUnit})
    * @param currentUnit the unit to use when reading current
    */
-  public currentSensor(DcMotorEx motor, double overcurrent, CurrentUnit currentUnit) {
+  public CurrentSensor(DcMotorEx motor, double overcurrent, CurrentUnit currentUnit) {
     this(motor, overcurrent, currentUnit, 250);
   }
 
@@ -93,7 +93,7 @@ public class currentSensor {
    * @param motor the {@link DcMotorEx} to monitor
    * @param overcurrent the overcurrent threshold in AMPS
    */
-  public currentSensor(DcMotorEx motor, double overcurrent) {
+  public CurrentSensor(DcMotorEx motor, double overcurrent) {
     this(motor, overcurrent, CurrentUnit.AMPS, 250);
   }
 
@@ -103,7 +103,7 @@ public class currentSensor {
    *
    * @param motor the {@link DcMotorEx} to monitor
    */
-  public currentSensor(DcMotorEx motor) {
+  public CurrentSensor(DcMotorEx motor) {
     this(motor, 7, CurrentUnit.AMPS, 250);
   }
 
