@@ -4,12 +4,8 @@ import static com.qualcomm.robotcore.hardware.DcMotor.ZeroPowerBehavior.BRAKE;
 
 import java.util.List;
 
-import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 
-import com.pedropathing.follower.Follower;
-import com.qualcomm.hardware.limelightvision.LLResult;
-import com.qualcomm.hardware.limelightvision.Limelight3A;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
@@ -24,9 +20,6 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 
 @TeleOp(name = "StarterBotTeleopMecanums", group = "StarterBot")
 public class StarterBotTeleopMecanums extends OpMode {
-  Limelight3A limelight;
-
-  private Follower follower;
   private PIDFController launchController;
   private double actualVelocity = 0;
   private boolean brakeFlag = false;
@@ -44,6 +37,7 @@ public class StarterBotTeleopMecanums extends OpMode {
   private DcMotorEx launcher = null;
   private CRServo leftFeeder = null;
   private CRServo rightFeeder = null;
+
   ElapsedTime feederTimer = new ElapsedTime();
   ElapsedTime voltageTimer = new ElapsedTime();
 
@@ -107,10 +101,6 @@ public class StarterBotTeleopMecanums extends OpMode {
     launcherReadyNotified = false;
 
     telemetry.addData("Status", "Initialized");
-    limelight = hardwareMap.get(Limelight3A.class, "limelight");
-    limelight.setPollRateHz(
-        100); // This sets how often we ask Limelight for data (100 times per second)
-    limelight.start(); // This tells Limelight to start looking!
   }
 
   @Override
@@ -184,31 +174,6 @@ public class StarterBotTeleopMecanums extends OpMode {
     telemetry.addData("launcherPower", launcher.getPower());
     for (LynxModule hub : allHubs) {
       hub.clearBulkCache();
-    }
-    // Guard limelight and follower usage to avoid runtime NPEs if either device fails to init
-    LLResult result = (limelight != null) ? limelight.getLatestResult() : null;
-    if (result != null && result.isValid()) {
-      double tx = result.getTx(); // How far left or right the target is (degrees)
-      double ty = result.getTy(); // How far up or down the target is (degrees)
-      double ta = result.getTa(); // How big the target looks (0%-100% of the image)
-
-      telemetry.addData("Target X", tx);
-      telemetry.addData("Target Y", ty);
-      telemetry.addData("Target Area", ta);
-    } else {
-      telemetry.addData("Limelight", "No Targets");
-    }
-
-    // First, tell Limelight which way your robot is facing (safe: default to 0 if follower missing)
-    double robotYaw = (follower != null) ? follower.getHeading() : 0.0;
-    if (limelight != null) limelight.updateRobotOrientation(robotYaw);
-    if (result != null && result.isValid()) {
-      Pose3D botpose_mt2 = result.getBotpose_MT2();
-      if (botpose_mt2 != null) {
-        double x = botpose_mt2.getPosition().x;
-        double y = botpose_mt2.getPosition().y;
-        telemetry.addData("MT2 Location:", "(" + x + ", " + y + ")");
-      }
     }
   }
 
