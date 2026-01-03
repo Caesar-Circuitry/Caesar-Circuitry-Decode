@@ -30,12 +30,10 @@ public class Constants {
       public static final double FEEDER_SERVO_CLOSE = 0.0;
 
       public static final double INTAKE_MOTOR_FORWARD = 1.0;
-      public static final double INTAKE_MOTOR_REVERSE = -1.0;
       public static final double INTAKE_MOTOR_HOLD = 0;
       public static final double INTAKE_MOTOR_HP = -1.0;
 
       public static final double TRANSFER_MOTOR_FORWARD = 1.0;
-      public static final double TRANSFER_MOTOR_REVERSE = -1.0;
       public static final double TRANSFER_MOTOR_HOLD = 0;
       public static final double TRANSFER_MOTOR_HP = -1.0;
   }
