@@ -49,8 +49,8 @@ public class Intake extends WSubsystem {
 
     FeederServo = hardwareMap.get(Servo.class, Constants.Intake.FEEDER_SERVO);
 
-    intakeBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.intakeBeamBreak);
-    transferBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.transferBeamBreak);
+    intakeBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.intakeBeamBreak, true);
+    transferBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.transferBeamBreak, true);
 
     intakeCurrentSensor = new CurrentSensor(this.intakeMotor, Constants.Intake.intakeOverCurrent);
     transferCurrentSensor =
