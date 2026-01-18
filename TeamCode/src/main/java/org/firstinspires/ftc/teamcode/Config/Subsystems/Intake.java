@@ -7,6 +7,7 @@ import org.firstinspires.ftc.teamcode.Config.Utils.CurrentSensor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.seattlesolvers.solverslib.command.InstantCommand;
 
 public class Intake extends WSubsystem {
   // this is the Intake/Transfer class
@@ -40,7 +41,7 @@ public class Intake extends WSubsystem {
 
   private State intakeState;
 
-  private Intake(HardwareMap hardwareMap) {
+  public Intake(HardwareMap hardwareMap) {
     intakeMotor = hardwareMap.get(DcMotorEx.class, Constants.Intake.INTAKE_MOTOR);
     transferMotor = hardwareMap.get(DcMotorEx.class, Constants.Intake.TRANSFER_MOTOR);
 
@@ -106,5 +107,18 @@ public class Intake extends WSubsystem {
     this.prevFeederServoTargetPos = FeederServoTargetPos;
     this.prevIntakeMotorTargetPower = intakeMotorTargetPower;
     this.prevTransferMotorTargetPower = transferMotorTargetPower;
+  }
+
+  public InstantCommand GroundIntake(){
+      return new InstantCommand(()-> intakeState = State.GROUND_INTAKING);
+  }
+  public InstantCommand Hold(){
+      return new InstantCommand(()-> intakeState = State.HOLD);
+  }
+  public InstantCommand Launch(){
+      return new InstantCommand(()-> intakeState = State.LAUNCH);
+  }
+  public InstantCommand HP_Intaking(){
+      return new InstantCommand(()-> intakeState = State.GROUND_INTAKING);
   }
 }

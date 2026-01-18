@@ -1,12 +1,14 @@
 package org.firstinspires.ftc.teamcode.Opmodes.Tester;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.Servo;
 
 @Configurable
 @TeleOp
+@Disabled
 public class DualServoTester extends LinearOpMode {
   private Servo servo;
   private Servo servo2;

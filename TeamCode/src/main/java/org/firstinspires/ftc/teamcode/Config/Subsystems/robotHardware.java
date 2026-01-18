@@ -10,7 +10,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class robotHardware extends WSubsystem {
   private Follower m_follower;
-  private Launcher launcher;
+  private Launcher Launcher;
+  private Intake Intake;
+  private Turret Turret;
   private HardwareMap hardwareMap;
   List<LynxModule> hubs;
 
@@ -19,26 +21,44 @@ public class robotHardware extends WSubsystem {
     this.hubs = hardwareMap.getAll(LynxModule.class);
     hubs.forEach(hub -> hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
     this.m_follower = PedroConstants.createFollower(hardwareMap);
-    this.launcher = new Launcher(hardwareMap);
+    this.Launcher = new Launcher(hardwareMap);
+    this.Intake = new Intake(hardwareMap);
+
   }
 
   @Override
   public void read() {
-    launcher.read();
+    Launcher.read();
+    Intake.read();
+    Turret.read();
   }
 
   @Override
   public void loop() {
-    launcher.loop();
+    Launcher.loop();
+    Intake.loop();
+    Turret.read();
   }
 
   @Override
   public void write() {
-    launcher.write();
+    Launcher.write();
+    Intake.write();
+    Turret.read();
     hubs.forEach(LynxModule::clearBulkCache);
+
   }
 
   public Follower getFollower() {
     return m_follower;
+  }
+  public Launcher getLauncher(){
+      return Launcher;
+  }
+  public Intake getIntake(){
+      return Intake;
+  }
+  public Turret getTurret(){
+      return Turret;
   }
 }

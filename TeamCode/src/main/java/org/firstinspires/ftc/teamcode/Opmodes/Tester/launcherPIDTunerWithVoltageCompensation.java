@@ -7,6 +7,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.CurrentUnit;
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.hardware.lynx.LynxModule;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -19,6 +20,7 @@ import com.seattlesolvers.solverslib.util.MathUtils;
 
 @TeleOp
 @Configurable
+@Disabled
 public class launcherPIDTunerWithVoltageCompensation extends LinearOpMode {
   PanelsTelemetry panelsTelemetry = PanelsTelemetry.INSTANCE;
 

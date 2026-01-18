@@ -1,24 +1,22 @@
 package org.firstinspires.ftc.teamcode.Opmodes.Tester;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
-import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+
 @Configurable
 @TeleOp
-@Disabled
-public class DualContinuousServoTesterPinpoint extends LinearOpMode {
+public class DualPIDContinuousServoTesterPinpoint extends LinearOpMode {
   private CRServo servo;
   private CRServo servo2;
   private AnalogInput servoEncoder; // encoder based on servo pos
@@ -29,10 +27,24 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
   private double lastRawEncoderAngle = 0;
   private static final double WRAP_THRESHOLD = 270.0;
 
-  // PID gains
+  // PID gain sets
+  public static boolean useLargePID = true; // Toggle: true = large PID, false = small PID
+
+  public static double kP_large = 0.008;
+  public static double kI_large = 0;
+  public static double kD_large = 0;
+
+  // Small PID gains (precise, smooth response)
+  public static double kP_small = 0.02;
+  public static double kI_small = 0;
+  public static double kD_small = 0;
+
+  // Active PID gains (will be set based on useLargePID)
   public static double kP = 0.01;
-  public static double kI = 0; // Integral eliminates steady-state error - start with kI = kP/100
-  public static double kD = 0; // Derivative dampens oscillations - start with kD = kP/10
+  public static double kI = 0;
+  public static double kD = 0;
+
+  // Feedforward gains
   public static double kF_left = 0.07; // Feedforward when turning left (positive error)
   public static double kF_right = -0.1; // Feedforward when turning right (negative error)
 
@@ -72,6 +84,17 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
       // Update pinpoint position
       pinpoint.update();
       double heading = pinpoint.getHeading(AngleUnit.DEGREES);
+
+      // Select PID gains based on toggle
+      if (useLargePID) {
+        kP = kP_large;
+        kI = kI_large;
+        kD = kD_large;
+      } else {
+        kP = kP_small;
+        kI = kI_small;
+        kD = kD_small;
+      }
 
       // Calculate desired turret angle (robot-relative) to point to targetAngle (field-relative)
       double desiredTurretAngleRaw = targetAngle - heading;
@@ -125,13 +148,18 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
       Telemetry.addData("Desired Turret Angle (robot-relative)", "%.2f deg", desiredTurretAngle);
       Telemetry.addData("Current Turret Angle (robot-relative)", "%.2f deg", currentTurretAngle);
       Telemetry.addData("---", "---");
+      Telemetry.addData("PID Mode", useLargePID ? "LARGE (Aggressive)" : "SMALL (Precise)");
+      Telemetry.addData("Active kP / kI / kD", "%.4f / %.4f / %.4f", kP, kI, kD);
+      Telemetry.addData("", "");
+      Telemetry.addData("Large PID", "P=%.4f I=%.4f D=%.4f", kP_large, kI_large, kD_large);
+      Telemetry.addData("Small PID", "P=%.4f I=%.4f D=%.4f", kP_small, kI_small, kD_small);
+      Telemetry.addData("---", "---");
       Telemetry.addData("Raw Encoder Angle", "%.2f deg", getCurrentPosition(servoEncoder));
       Telemetry.addData("Encoder Wraps", encoderWraps);
       Telemetry.addData("Current Servo Angle (unwrapped)", "%.2f deg", currentServoAngle);
       Telemetry.addData("Desired Servo Angle", "%.2f deg", desiredServoAngle);
       Telemetry.addData("Servo Error", "%.2f deg", wrappedServoError);
       Telemetry.addData("---", "---");
-      Telemetry.addData("kP / kI / kD", "%.4f / %.4f / %.4f", kP, kI, kD);
       Telemetry.addData("kF (Left / Right)", "%.4f / %.4f", kF_left, kF_right);
       Telemetry.addData("Servo Encoder Voltage", "%.2f V", servoEncoder.getVoltage());
       Telemetry.addData("Servo Power", "%.3f", servoPower);

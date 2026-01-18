@@ -1,61 +1,156 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import static org.firstinspires.ftc.teamcode.Config.Constants.Turret.*;
+import static org.firstinspires.ftc.teamcode.Config.Utils.TurretMath.*;
 
-import com.qualcomm.hardware.limelightvision.Limelight3A;
+import com.pedropathing.follower.Follower;
+import com.qualcomm.robotcore.hardware.AnalogInput;
+import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
-import com.qualcomm.robotcore.hardware.Servo;
-import com.seattlesolvers.solverslib.hardware.AbsoluteAnalogEncoder;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.controller.PIDFController;
+
 
 public class Turret extends WSubsystem {
-  private Servo turretServoLead;
-  private Servo turretServoFollow;
+    private CRServo servo;
+    private CRServo servo2;
+    private AnalogInput servoEncoder;
+    private PIDFController angleController;
+    private Follower follower;
 
-  private Limelight3A limelight3A;
+    // Configurable parameters
+    private double targetAngle = 0; // field-relative angle the turret should face
 
-  private AbsoluteAnalogEncoder turretServoLeadEncoder;
-  private AbsoluteAnalogEncoder turretServoFollowEncoder;
+    // Read variables (sensor values)
+    private double heading = 0;
+    private double currentServoAngle = 0;
 
-  private double turretServoLeadPosition = 0.0;
-  private double turretServoLeadCurrentPosition = 0.0;
-  private double turretServoFollowPosition = 0.0;
-  private double turretServoFollowCurrentPosition = 0.0;
+    private double desiredTurretAngle;
+    private double desiredServoAngle;
+    private double currentTurretAngle;
+    private double wrappedServoError;
+    private double adjustedTarget;
 
-  public Turret(HardwareMap hardwareMap) {
-    turretServoLead = hardwareMap.get(Servo.class, "turretServoLead");
-    turretServoFollow = hardwareMap.get(Servo.class, "turretServoFollow");
+    // Write variables (actuator commands)
+    private double servoPower = 0;
 
-    turretServoLeadEncoder =
-        new AbsoluteAnalogEncoder(hardwareMap, "turretServoLeadEncoder", 270, AngleUnit.DEGREES);
-    turretServoFollowEncoder =
-        new AbsoluteAnalogEncoder(hardwareMap, "turretServoFollowEncoder", 270, AngleUnit.DEGREES);
-    turretServoFollow.setDirection(Servo.Direction.REVERSE);
-    turretServoFollowEncoder.setReversed(true);
-    limelight3A = hardwareMap.get(Limelight3A.class, "limelight3a");
+
+
+  public Turret(HardwareMap hardwareMap, Follower follower) {
+      servo = hardwareMap.get(CRServo.class, servoName);
+      servo2 = hardwareMap.get(CRServo.class, servoName2);
+      servoEncoder = hardwareMap.get(AnalogInput.class, servoEncoderName);
+      this.follower = follower;
+      angleController = new PIDFController(kP, kI, kD, 0);
   }
 
   @Override
   public void read() {
-    turretServoLeadCurrentPosition = turretServoLeadEncoder.getCurrentPosition();
-    turretServoFollowCurrentPosition = turretServoFollowEncoder.getCurrentPosition();
+    // Read robot heading from follower
+    heading = follower.getHeading();
+
+    // Read current servo angle from absolute encoder (in degrees)
+    currentServoAngle = getUnwrappedServoAngle(servoEncoder);
   }
 
   @Override
-  public void loop() {}
+  public void loop() {
 
-  private double angleDegToServoPos(double angleDeg) {
-    double pos = (angleDeg + 135.0) / 270.0;
-    if (pos < 0.0) return 0.0;
-    if (pos > 1.0) return 1.0;
-    return pos;
+    // Calculate desired turret angle (robot-relative) to point to targetAngle (field-relative)
+    double desiredTurretAngleRaw = targetAngle - heading;
+    double wrappedDesiredTurretAngle = wrap180(desiredTurretAngleRaw);
+
+    // Find the closest valid turret angle within the 270-degree range (-135 to +135)
+    desiredTurretAngle = getClosestAngleInRange(wrappedDesiredTurretAngle, -135.0, 135.0);
+
+    // Convert desired turret angle to desired servo angle using gear ratio
+    desiredServoAngle = desiredTurretAngle * gearRatio;
+
+    // Convert current servo angle to equivalent turret angle for telemetry
+    currentTurretAngle = currentServoAngle / gearRatio;
+
+    // Calculate servo power using PID control
+    double servoError = desiredServoAngle - currentServoAngle;
+    wrappedServoError = wrap180(servoError);
+
+    // Calculate the target position that's closest to current via wrapping
+    adjustedTarget = currentServoAngle + wrappedServoError;
+
+    // Use PID controller with current position and adjusted target
+    angleController.setSetPoint(adjustedTarget);
+    servoPower = angleController.calculate(currentServoAngle);
+
+    // Add direction-specific feedforward term to overcome friction/deadband
+    // Both directions add positive feedforward in the direction of motion
+    if (wrappedServoError > 0) {
+      servoPower += kF_left;  // Moving left (positive power)
+    } else if (wrappedServoError < 0) {
+      servoPower += kF_right; // Moving right (negative power)
+    }
+
+    // Clamp servo power to valid range for CRServo
+    servoPower = clamp(servoPower, -1.0, 1.0);
   }
 
   @Override
   public void write() {
-    double leadServoPos = angleDegToServoPos(turretServoLeadPosition);
-    double followServoPos = angleDegToServoPos(turretServoFollowPosition);
+    // Set power to both servos
+    servo.setPower(servoPower);
+    servo2.setPower(servoPower);
+  }
 
-    turretServoLead.setPosition(leadServoPos);
-    turretServoFollow.setPosition(followServoPos);
+  // Public methods for controlling and querying turret state
+
+  /**
+   * Set the target angle (field-relative) for the turret to point to
+   * @param angle Target angle in degrees (field-relative)
+   */
+  public void setTargetAngle(double angle) {
+    this.targetAngle = angle;
+  }
+
+  /**
+   * Get the current target angle (field-relative)
+   * @return Target angle in degrees
+   */
+  public double getTargetAngle() {
+    return targetAngle;
+  }
+
+  /**
+   * Get the current turret angle (robot-relative)
+   * @return Current turret angle in degrees
+   */
+  public double getCurrentTurretAngle() {
+    return currentTurretAngle;
+  }
+
+  /**
+   * Get the desired turret angle after range limiting
+   * @return Desired turret angle in degrees
+   */
+  public double getDesiredTurretAngle() {
+    return desiredTurretAngle;
+  }
+
+
+  /**
+   * Get the current servo power being applied
+   * @return Servo power from -1.0 to 1.0
+   */
+  public double getServoPower() {
+    return servoPower;
+  }
+
+  /**
+   * Get the error between desired and current servo angle (wrapped)
+   * @return Error in degrees
+   */
+  public double getServoError() {
+    return wrappedServoError;
+  }
+
+  public InstantCommand TargetAngle(double Angle){
+      return new InstantCommand(()->setTargetAngle(Angle));
   }
 }

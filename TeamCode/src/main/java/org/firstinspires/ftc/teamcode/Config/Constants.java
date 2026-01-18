@@ -11,18 +11,25 @@ public class Constants {
   @Configurable
   public static class Launcher {
 
-    public static final String FLYWHEEL_MOTOR_LEAD = "FlywheelMotorLead";
-    public static final String FLYWHEEL_MOTOR_FOLLOW = "FlywheelMotorFollow";
+    public static final String FLYWHEEL_MOTOR_LEAD = "Flywheel1";
+    public static final String FLYWHEEL_MOTOR_FOLLOW = "Flywheel2";
 
     public static final boolean FLYWHEEL_MOTOR_LEAD_INVERTED = false;
     public static final boolean FLYWHEEL_MOTOR_FOLLOW_INVERTED = true;
 
-    public static final double kP = 0.0;
-    public static final double kI = 0.0;
+    public static final double kP = 0.01;
+    public static final double kI = 0.5;
     public static final double kD = 0.0;
-    public static final double kS = 0.0;
-    public static final double kV = 0.0;
-    public static final double kA = 0.0;
+    public static final double kS = 0.13;
+    public static final double NOMINAL_BATTERY_VOLTAGE = 12;
+    public static final double VOLTAGE_UPDATE_INTERVAL_SECONDS = 5;
+
+    // Deadband to prevent oscillation when stopping (ticks per second)
+    public static final double VELOCITY_DEADBAND = 50.0;
+
+    public static final double FarVelocity = 1500;
+    public static final double closeVelocity = 1000;
+    public static final double intakeVelocity = -500;
   }
 
   @Configurable
@@ -43,8 +50,8 @@ public class Constants {
     public static final DcMotorSimple.Direction TRANSFER_MOTOR_DIRECTION =
         DcMotorSimple.Direction.FORWARD;
 
-    public static final double FEEDER_SERVO_OPEN = 0.0;
-    public static final double FEEDER_SERVO_CLOSE = 0.0;
+    public static final double FEEDER_SERVO_OPEN = 0.5;
+    public static final double FEEDER_SERVO_CLOSE = 0.63;
 
     public static final double INTAKE_MOTOR_FORWARD = 1.0;
     public static final double INTAKE_MOTOR_REVERSE = -1.0;
@@ -59,31 +66,21 @@ public class Constants {
 
   @Configurable
   public static class Turret {
-    public static final double kP = 0;
-    public static final double kI = 0;
-    public static final double kD = 0;
-    public static final double kF = 0;
+      public static String servoName = "servo1";
+      public static String servoName2 = "servo2";
+      public static String servoEncoderName = "rightServo";
 
-    public static final double GoalAngle = 144; // degrees
-    public static final double minAngle = -135; // degrees
-    public static final double maxAngle = 135; // degrees
+      public static double gearRatio =
+              2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
 
-    public static final double TURRET_KF_MODEL_COVARIANCE = 0.01;
-    // How much we trust the model (Pinpoint robot heading)
-    // Smaller = trust odometry more
+      public static double kP = 0.008;
+      public static double kI = 0;
+      public static double kD = 0;
+      public static double kF_left = 0.07; // Feedforward when turning left (positive error)
+      public static double kF_right = -0.1; // Feedforward when turning right (negative error)
 
-    public static final double TURRET_KF_DATA_COVARIANCE = 6.0;
-    // How noisy the Limelight tx measurement is (deg^2)
-    // Higher = trust Limelight less
-
-    public static final double TURRET_KF_START_STATE = 0.0;
-    // Initial turret relative angle (deg)
-
-    public static final double TURRET_KF_START_VARIANCE = 16.0;
-    // Initial uncertainty (~4 deg standard deviation)
-
-    public static final double TURRET_KF_START_GAIN = 0.5;
-    // Initial Kalman gain (0–1)
+      public static final double GoalAngle = 144; // degrees
+        public static final double WRAP_THRESHOLD = 270.0;
 
   }
 }
