@@ -17,7 +17,13 @@ import java.util.List;
 public class EKFTuner extends OpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;
-    private Pose startingPose = new Pose();
+
+    // Default starting pose - can be adjusted during init with gamepad
+    private double startX = 0.0;
+    private double startY = 0.0;
+    private double startHeading = 0.0; // degrees
+
+    private Pose startingPose = new Pose(0, 0, 0);
 
     private ElapsedTime timer = new ElapsedTime();
     private ElapsedTime sampleTimer = new ElapsedTime();
@@ -35,8 +41,8 @@ public class EKFTuner extends OpMode {
     private int readingsInSecond = 0;
     private int visionReadingsInSecond = 0;
 
-    private static final double SAMPLE_INTERVAL = 1.0; // 1 second intervals
-    private static final int MAX_SAMPLES = 100; // Collect 100 samples (100 seconds)
+    private static final double SAMPLE_INTERVAL = 1.5; // 1.5 second intervals (fast collection)
+    private static final int MAX_SAMPLES = 20; // Collect 20 samples (30 seconds per phase)
 
     private enum TuningState {
         WAITING_TO_START,
@@ -60,27 +66,56 @@ public class EKFTuner extends OpMode {
     public void init() {
         robot = new robot(hardwareMap);
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
+    }
 
-        telemetry.addLine("EKF Tuner");
-        telemetry.addLine("This will measure Q and R matrices for the Kalman filter");
+    @Override
+    public void init_loop() {
+        // Try to get starting pose from Limelight MT1
+        robot.read();
+        double[] mt1Pose = robot.getHardware().getVision().getMT1Pose();
+
+        if (mt1Pose != null) {
+            startX = mt1Pose[0];
+            startY = mt1Pose[1];
+            startHeading = Math.toDegrees(mt1Pose[2]);
+
+            telemetry.addLine("=== EKF Tuner ===");
+            telemetry.addLine("✓ Starting pose locked from Limelight MT1");
+            telemetry.addLine();
+            telemetry.addData("X Position", "%.2f inches", startX);
+            telemetry.addData("Y Position", "%.2f inches", startY);
+            telemetry.addData("Heading", "%.2f degrees", startHeading);
+            telemetry.addLine();
+            telemetry.addLine("Press START to begin tuning");
+        } else {
+            telemetry.addLine("=== EKF Tuner ===");
+            telemetry.addLine("⚠ Waiting for AprilTags...");
+            telemetry.addLine();
+            telemetry.addLine("Make sure AprilTags are visible!");
+            telemetry.addLine("Starting pose will be set from Limelight MT1");
+        }
+
         telemetry.addLine();
-        telemetry.addLine("Instructions:");
-        telemetry.addLine("1. Place robot stationary on field");
-        telemetry.addLine("2. Ensure AprilTags are visible");
-        telemetry.addLine("3. Press START (flywheel will start automatically)");
+        telemetry.addLine("Test will:");
+        telemetry.addLine("1. Collect drift data (30 seconds)");
+        telemetry.addLine("2. Collect vision data (30 seconds)");
+        telemetry.addLine("3. Calculate Q and R matrices");
         telemetry.addLine();
-        telemetry.addLine("Test duration: ~3.5 minutes (200 seconds)");
-        telemetry.addLine("DO NOT MOVE ROBOT during test!");
-        telemetry.update();
-        telemetry.addLine("Test duration: ~3.5 minutes (200 seconds)");
+        telemetry.addLine("Total time: ~1 minute");
         telemetry.addLine("DO NOT MOVE ROBOT during test!");
         telemetry.update();
     }
 
     @Override
     public void start() {
+        // Set starting pose from MT1 data collected during init
+        startingPose = new Pose(startX, startY, Math.toRadians(startHeading));
         robot.getHardware().getFollower().setStartingPose(startingPose);
-        robot.getHardware().getFollower().getPose(); // Initialize pose
+        robot.getHardware().getTurret().setTargetAngle(Math.toDegrees(startingPose.getHeading()));
+
+        // Disable pose correction during tuning to prevent feedback loops
+        robot.getHardware().getVision().setEnablePoseCorrection(false);
+
         timer.reset();
         sampleTimer.reset();
         state = TuningState.COLLECTING_DRIFT_DATA;
@@ -152,7 +187,7 @@ public class EKFTuner extends OpMode {
             telemetry.addLine("=== DRIFT DATA COLLECTION ===");
             telemetry.addData("Phase", "Measuring Pinpoint drift (Q matrix)");
             telemetry.addData("Samples collected", xSamples.size() + " / " + MAX_SAMPLES);
-            telemetry.addData("Time remaining", (MAX_SAMPLES - xSamples.size()) + " seconds");
+            telemetry.addData("Time remaining", ((MAX_SAMPLES - xSamples.size()) * SAMPLE_INTERVAL) + " seconds");
             telemetry.addLine();
             telemetry.addLine("Keep robot STATIONARY with flywheel RUNNING");
             telemetry.addData("Current X drift", xAvg);
@@ -205,7 +240,7 @@ public class EKFTuner extends OpMode {
             telemetry.addLine("=== VISION DATA COLLECTION ===");
             telemetry.addData("Phase", "Measuring Limelight noise (R matrix)");
             telemetry.addData("Samples collected", visionXSamples.size() + " / " + MAX_SAMPLES);
-            telemetry.addData("Time remaining", (MAX_SAMPLES - visionXSamples.size()) + " seconds");
+            telemetry.addData("Time remaining", ((MAX_SAMPLES - visionXSamples.size()) * SAMPLE_INTERVAL) + " seconds");
             telemetry.addLine();
             telemetry.addLine("Keep robot STATIONARY with AprilTags VISIBLE");
             telemetry.addData("Readings this second", visionReadingsInSecond);
@@ -237,24 +272,28 @@ public class EKFTuner extends OpMode {
         if (samples.size() < 2) return 0;
 
         // Method 1: First and last measurement divided by sqrt(time)
+        double totalTime = samples.size() * SAMPLE_INTERVAL;
         double method1 = Math.abs(samples.get(samples.size() - 1) - samples.get(0)) /
-                        Math.sqrt(samples.size() * SAMPLE_INTERVAL);
+                        Math.sqrt(totalTime);
 
-        // Method 2: Average of all 1-second differences
+        // Method 2: Average of all consecutive differences
         double sumDiff = 0;
         for (int i = 1; i < samples.size(); i++) {
             sumDiff += Math.abs(samples.get(i) - samples.get(i - 1));
         }
         double method2 = sumDiff / (samples.size() - 1) / Math.sqrt(SAMPLE_INTERVAL);
 
-        // Method 3: Average of 4-second differences divided by 2
-        double sumDiff4 = 0;
-        int count = 0;
-        for (int i = 4; i < samples.size(); i++) {
-            sumDiff4 += Math.abs(samples.get(i) - samples.get(i - 4));
-            count++;
+        // Method 3: Average of 4-interval differences (if we have enough samples)
+        double method3 = method2; // Default to method2 if not enough samples
+        if (samples.size() >= 6) { // Need at least 6 samples for 4-interval differences
+            double sumDiff4 = 0;
+            int count = 0;
+            for (int i = 4; i < samples.size(); i++) {
+                sumDiff4 += Math.abs(samples.get(i) - samples.get(i - 4));
+                count++;
+            }
+            method3 = (count > 0) ? (sumDiff4 / count) / Math.sqrt(4 * SAMPLE_INTERVAL) : method2;
         }
-        double method3 = (count > 0) ? (sumDiff4 / count) / Math.sqrt(4 * SAMPLE_INTERVAL) / 2 : method2;
 
         // Return average of all methods
         return (method1 + method2 + method3) / 3.0;

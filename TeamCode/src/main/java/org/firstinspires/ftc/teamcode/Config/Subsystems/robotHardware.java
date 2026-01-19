@@ -27,7 +27,7 @@ public class robotHardware extends WSubsystem {
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
     this.Turret = new Turret(hardwareMap,m_follower);
-    this.vision = new Vision(hardwareMap,m_follower);
+    this.vision = new Vision(hardwareMap,m_follower,Turret);
 
   }
 

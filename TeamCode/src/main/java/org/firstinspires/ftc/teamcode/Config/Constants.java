@@ -99,5 +99,21 @@ public class Constants {
   }
   public static class Vision {
       public static final String cameraName = "limelight";
+
+      // Limelight mounting position on turret (relative to robot center when turret at 0°)
+      public static final double LIMELIGHT_X_OFFSET = 0.0; // inches forward from robot center
+      public static final double LIMELIGHT_Y_OFFSET = 0.0; // inches left from robot center
+      public static final double LIMELIGHT_HEADING_OFFSET = 0.0; // degrees offset from turret angle
+
+      // EKF Tuning parameters - measure these from EKF Tuner
+      public static final double X_DRIFT_SIGMA = 0.000348; // inches/sqrt(sec)
+      public static final double Y_DRIFT_SIGMA = 0.000999; // inches/sqrt(sec)
+      public static final double HEADING_DRIFT_SIGMA = 0.000182; // rad/sqrt(sec)
+
+      public static final double LIMELIGHT_X_STD = 0.001083; // inches
+      public static final double LIMELIGHT_Y_STD = 0.000438; // inches
+      public static final double LIMELIGHT_HEADING_STD = 0.000437; // radians
+
+      public static final double LOOP_TIME = 0.02; // 20ms = 50Hz
   }
 }
