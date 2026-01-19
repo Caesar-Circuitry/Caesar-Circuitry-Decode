@@ -7,6 +7,7 @@ import org.firstinspires.ftc.teamcode.Config.Utils.CurrentSensor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.qualcomm.robotcore.hardware.Servo;
+import com.seattlesolvers.solverslib.command.Command;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
 public class Intake extends WSubsystem {
@@ -39,7 +40,7 @@ public class Intake extends WSubsystem {
     HOLD
   }
 
-  private State intakeState;
+  private State intakeState = State.HOLD;
 
   public Intake(HardwareMap hardwareMap) {
     intakeMotor = hardwareMap.get(DcMotorEx.class, Constants.Intake.INTAKE_MOTOR);
@@ -50,8 +51,8 @@ public class Intake extends WSubsystem {
 
     FeederServo = hardwareMap.get(Servo.class, Constants.Intake.FEEDER_SERVO);
 
-    intakeBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.intakeBeamBreak, true);
-    transferBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.transferBeamBreak, true);
+    intakeBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.intakeBeamBreak, false);
+    transferBeamBreak = new BeamBreak(hardwareMap, Constants.Intake.transferBeamBreak, false);
 
     intakeCurrentSensor = new CurrentSensor(this.intakeMotor, Constants.Intake.intakeOverCurrent);
     transferCurrentSensor =
@@ -119,6 +120,6 @@ public class Intake extends WSubsystem {
       return new InstantCommand(()-> intakeState = State.LAUNCH);
   }
   public InstantCommand HP_Intaking(){
-      return new InstantCommand(()-> intakeState = State.GROUND_INTAKING);
+      return new InstantCommand(()-> intakeState = State.HP_INTAKING);
   }
 }

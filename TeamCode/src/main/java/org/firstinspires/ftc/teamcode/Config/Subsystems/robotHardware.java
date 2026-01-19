@@ -5,6 +5,7 @@ import java.util.List;
 import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
@@ -13,6 +14,7 @@ public class robotHardware extends WSubsystem {
   private Launcher Launcher;
   private Intake Intake;
   private Turret Turret;
+  private Vision vision;
   private HardwareMap hardwareMap;
   List<LynxModule> hubs;
 
@@ -21,8 +23,11 @@ public class robotHardware extends WSubsystem {
     this.hubs = hardwareMap.getAll(LynxModule.class);
     hubs.forEach(hub -> hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
     this.m_follower = PedroConstants.createFollower(hardwareMap);
+    this.m_follower.setStartingPose(new Pose(0,0,0));
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
+    this.Turret = new Turret(hardwareMap,m_follower);
+    this.vision = new Vision(hardwareMap,m_follower);
 
   }
 
@@ -31,20 +36,24 @@ public class robotHardware extends WSubsystem {
     Launcher.read();
     Intake.read();
     Turret.read();
+    vision.read();
   }
 
   @Override
   public void loop() {
     Launcher.loop();
     Intake.loop();
-    Turret.read();
+    Turret.loop();
+    m_follower.update();
+    vision.loop();
   }
 
   @Override
   public void write() {
     Launcher.write();
     Intake.write();
-    Turret.read();
+    Turret.write();
+    vision.write();
     hubs.forEach(LynxModule::clearBulkCache);
 
   }
@@ -60,5 +69,8 @@ public class robotHardware extends WSubsystem {
   }
   public Turret getTurret(){
       return Turret;
+  }
+  public Vision getVision(){
+      return vision;
   }
 }

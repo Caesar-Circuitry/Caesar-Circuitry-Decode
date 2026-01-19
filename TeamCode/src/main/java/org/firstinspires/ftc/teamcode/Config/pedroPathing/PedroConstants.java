@@ -27,10 +27,10 @@ public class PedroConstants {
   public static MecanumConstants driveConstants =
       new MecanumConstants()
           .maxPower(1)
-          .rightFrontMotorName("FRM")
-          .rightRearMotorName("BRM")
-          .leftRearMotorName("BLM")
-          .leftFrontMotorName("FLM")
+          .rightFrontMotorName("frontRight")
+          .rightRearMotorName("backRight")
+          .leftRearMotorName("backLeft")
+          .leftFrontMotorName("frontLeft")
           .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
           .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
           .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
@@ -40,10 +40,10 @@ public class PedroConstants {
 
   public static PinpointConstants localizerConstants =
       new PinpointConstants()
-          .forwardPodY(7 / 16)
-          .strafePodX(3)
-          .distanceUnit(DistanceUnit.INCH)
           .hardwareMapName("pinpoint")
+          .forwardPodY(-5.5)
+          .strafePodX(1.875)
+          .distanceUnit(DistanceUnit.INCH)
           .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
           .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
           .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);

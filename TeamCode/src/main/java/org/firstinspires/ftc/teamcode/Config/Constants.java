@@ -34,10 +34,10 @@ public class Constants {
 
   @Configurable
   public static class Intake {
-    public static final String INTAKE_MOTOR = "IntakeMotor";
-    public static final String TRANSFER_MOTOR = "TransferMotor";
+    public static final String INTAKE_MOTOR = "Intake";
+    public static final String TRANSFER_MOTOR = "Transfer";
 
-    public static final String FEEDER_SERVO = "FeederServo";
+    public static final String FEEDER_SERVO = "servo3";
 
     public static final String intakeBeamBreak = "intakeBeamBreak";
     public static final String transferBeamBreak = "transferBeamBreak";
@@ -56,31 +56,48 @@ public class Constants {
     public static final double INTAKE_MOTOR_FORWARD = 1.0;
     public static final double INTAKE_MOTOR_REVERSE = -1.0;
     public static final double INTAKE_MOTOR_HOLD = 0;
-    public static final double INTAKE_MOTOR_HP = -1.0;
+    public static final double INTAKE_MOTOR_HP = -0.5;
 
     public static final double TRANSFER_MOTOR_FORWARD = 1.0;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
     public static final double TRANSFER_MOTOR_HOLD = 0;
-    public static final double TRANSFER_MOTOR_HP = -1.0;
+    public static final double TRANSFER_MOTOR_HP = -0.5;
   }
 
   @Configurable
   public static class Turret {
-      public static String servoName = "servo1";
-      public static String servoName2 = "servo2";
-      public static String servoEncoderName = "rightServo";
+      public static final String servoName = "servo1";
+      public static final String servoName2 = "servo2";
+      public static final String servoEncoderName = "rightServo";
 
-      public static double gearRatio =
+      public static final double gearRatio =
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
 
-      public static double kP = 0.008;
-      public static double kI = 0;
-      public static double kD = 0;
-      public static double kF_left = 0.07; // Feedforward when turning left (positive error)
-      public static double kF_right = -0.1; // Feedforward when turning right (negative error)
+      public static final double kP = 0.008;
+      public static final double kI = 0;
+      public static final double kD = 0;
+      public static final double kF_left = 0.07; // Feedforward when turning left (positive error)
+      public static final double kF_right = -0.1; // Feedforward when turning right (negative error)
 
-      public static final double GoalAngle = 144; // degrees
+      public static final double GoalAngleBlue = -18; // degrees
+      public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
 
+  }
+  public static class Robot {
+      public enum motif{
+          GPP,
+          PGP,
+          PPG
+      }
+      public enum Alliance{
+          RED,
+          BLUE
+      }
+      public static motif CurrentMOTIF = motif.GPP; //defaults to green purple purple
+      public static Alliance alliance = Alliance.BLUE; //defaults to blue
+  }
+  public static class Vision {
+      public static final String cameraName = "limelight";
   }
 }

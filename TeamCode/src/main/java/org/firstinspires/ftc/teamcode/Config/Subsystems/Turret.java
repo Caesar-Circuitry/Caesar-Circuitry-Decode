@@ -47,7 +47,7 @@ public class Turret extends WSubsystem {
   @Override
   public void read() {
     // Read robot heading from follower
-    heading = follower.getHeading();
+    heading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
 
     // Read current servo angle from absolute encoder (in degrees)
     currentServoAngle = getUnwrappedServoAngle(servoEncoder);

@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
 import java.util.List;
 
+import org.firstinspires.ftc.teamcode.Config.Commands.IntakeOff;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics;
 
@@ -23,6 +24,7 @@ public class Launcher extends WSubsystem {
 
   private double flywheelVelocity = 0.0;
   private double flywheelTargetVelocity = 0.0; // Ticks per second
+    private boolean stopPower;
 
 
   private List<VoltageSensor> voltageSensors;
@@ -88,6 +90,11 @@ public class Launcher extends WSubsystem {
       compensatedPower = 0.0;
       return;
     }
+    if (stopPower){
+        compensatedPower =0.0;
+        return;
+    }
+
 
     // Calculate base power using PID controller + static feedforward
     double basePower = MathUtils.clamp(
@@ -131,6 +138,7 @@ public class Launcher extends WSubsystem {
   }
 
   public void setFlywheelTargetVelocity(double flywheelTargetVelocity) {
+    setStopPower(false);
     this.flywheelTargetVelocity = flywheelTargetVelocity;
   }
 
@@ -164,5 +172,11 @@ public class Launcher extends WSubsystem {
   }
   public InstantCommand LaunchRannge(double range){
     return new InstantCommand(()->setFlywheelTargetVelocity(FlywheelKinematics.calculateFlywheelSpeed(range)));
+  }
+  public InstantCommand stopPower(){
+      return new InstantCommand(()->setStopPower(true));
+  }
+  public void setStopPower(boolean stopPower){
+      this.stopPower = stopPower;
   }
 }
