@@ -19,17 +19,18 @@ public class Turret extends WSubsystem {
     private Follower follower;
 
     // Configurable parameters
-    private double targetAngle = 0; // field-relative angle the turret should face
+    private double targetAngle = 0; // field-relative angle the turret should face (wrapped -180 to 180)
 
     // Read variables (sensor values)
     private double heading = 0;
-    private double currentServoAngle = 0;
+    private double rawServoAngle = 0; // wrapped 0-360 from analog encoder
+    private double previousRawServoAngle = 0; // for wrap detection
+    private double unwrappedServoAngle = 0; // accumulated total rotation (can be any value, like motor encoder)
 
-    private double desiredTurretAngle;
-    private double desiredServoAngle;
-    private double currentTurretAngle;
-    private double wrappedServoError;
-    private double adjustedTarget;
+    // Loop variables
+    private double targetServoAngle = 0; // unwrapped target servo angle (can be any value)
+    private double servoError = 0;
+    private double currentTurretAngle = 0; // for telemetry
 
     // Write variables (actuator commands)
     private double servoPower = 0;
@@ -42,6 +43,12 @@ public class Turret extends WSubsystem {
       servoEncoder = hardwareMap.get(AnalogInput.class, servoEncoderName);
       this.follower = follower;
       angleController = new PIDFController(kP, kI, kD, 0);
+
+      // Initialize unwrapped angle tracking
+      rawServoAngle = servoEncoder.getVoltage() / 3.3 * 360.0;
+      previousRawServoAngle = rawServoAngle;
+      unwrappedServoAngle = rawServoAngle; // Start at current position
+      targetServoAngle = unwrappedServoAngle;
   }
 
   @Override
@@ -49,79 +56,87 @@ public class Turret extends WSubsystem {
     // Read robot heading from follower
     heading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
 
-    // Read current servo angle from absolute encoder (in degrees)
-    currentServoAngle = getUnwrappedServoAngle(servoEncoder);
+    // Read raw servo angle from absolute encoder (wrapped 0-360)
+    rawServoAngle = servoEncoder.getVoltage() / 3.3 * 360.0;
+
+    // Detect wraps and accumulate to create unwrapped angle (like motor encoder)
+    double delta = rawServoAngle - previousRawServoAngle;
+
+    // If we wrapped around (jumped from ~360 to ~0 or ~0 to ~360)
+    if (delta > 180) {
+      // Wrapped backwards (360 -> 0), we actually moved negative
+      delta -= 360;
+    } else if (delta < -180) {
+      // Wrapped forwards (0 -> 360), we actually moved positive
+      delta += 360;
+    }
+
+    // Update unwrapped angle by adding the actual movement
+    unwrappedServoAngle += delta;
+
+    // Store for next iteration
+    previousRawServoAngle = rawServoAngle;
   }
 
   @Override
   public void loop() {
-
     // Calculate desired turret angle (robot-relative) to point to targetAngle (field-relative)
     double desiredTurretAngleRaw = targetAngle - heading;
     double wrappedDesiredTurretAngle = wrap180(desiredTurretAngleRaw);
 
     // Convert current servo angle to equivalent turret angle for telemetry
-    currentTurretAngle = currentServoAngle / gearRatio;
-
-    // Wrap current turret angle to -180 to +180 for comparison
+    currentTurretAngle = unwrappedServoAngle / gearRatio;
     double wrappedCurrentTurretAngle = wrap180(currentTurretAngle);
 
     // Smart range limiting: prevent wire damage by choosing safe boundary
-    desiredTurretAngle = getSafeTurretAngle(wrappedDesiredTurretAngle, wrappedCurrentTurretAngle);
+    double safeTurretAngle = getSafeTurretAngle(wrappedDesiredTurretAngle, wrappedCurrentTurretAngle);
 
-    // Find the unwrapped servo angle target that corresponds to the desired turret angle
-    // We need to find which "wrap" of the desired angle is closest to our current position
-    double baseServoAngle = desiredTurretAngle * gearRatio;
+    // Find the closest unwrapped servo target that achieves the safe turret angle
+    // This is the key: we work in unwrapped space like the motor encoder example
+    double baseServoAngle = safeTurretAngle * gearRatio;
 
-    // Find which 360° wrap the current servo position is in
-    // This handles cases where servo has rotated many times (e.g., currentServoAngle = 1080°)
-    int currentWrapCount = (int) Math.round(currentServoAngle / 360.0);
+    // Find which 360° wrap we're currently in
+    int currentWrapCount = (int) Math.round(unwrappedServoAngle / 360.0);
 
-    // Generate candidates in both directions from current wrap
-    // Check enough wraps to ensure we find all possible paths including unwrapping
-    int searchRange = 3; // Check 3 wraps in each direction to handle edge cases
+    // Check 3 candidates: one wrap behind, current wrap, one wrap ahead
+    double[] candidates = {
+      baseServoAngle + ((currentWrapCount - 1) * 360.0),
+      baseServoAngle + (currentWrapCount * 360.0),
+      baseServoAngle + ((currentWrapCount + 1) * 360.0)
+    };
 
-    java.util.List<Double> candidates = new java.util.ArrayList<>();
-    for (int i = -searchRange; i <= searchRange; i++) {
-      candidates.add(baseServoAngle + ((currentWrapCount + i) * 360.0));
-    }
-
-    // Find the valid candidate with the shortest safe path (supporting infinite wraps)
-    desiredServoAngle = baseServoAngle + (currentWrapCount * 360.0); // default to middle candidate
+    // Choose the candidate with shortest distance that doesn't cross forbidden zone
+    targetServoAngle = candidates[1]; // default to middle
     double minDistance = Double.MAX_VALUE;
 
     for (double candidate : candidates) {
-      // First check: does this candidate produce the desired turret angle when wrapped?
+      // Verify this candidate produces the correct turret angle
       double candidateTurretAngle = wrap180(candidate / gearRatio);
-      double tolerance = 0.1; // Allow small numerical errors
-
-      // Skip candidates that don't match the desired turret angle
-      if (Math.abs(candidateTurretAngle - desiredTurretAngle) > tolerance) {
-        continue;
+      if (Math.abs(candidateTurretAngle - safeTurretAngle) > 0.1) {
+        continue; // Wrong angle due to wrapping
       }
 
-      // Check if taking this path would cross the forbidden zone
-      if (isPathSafe(currentServoAngle, candidate)) {
-        double distance = Math.abs(candidate - currentServoAngle);
+      // Check if path is safe
+      if (isPathSafe(unwrappedServoAngle, candidate)) {
+        double distance = Math.abs(candidate - unwrappedServoAngle);
         if (distance < minDistance) {
           minDistance = distance;
-          desiredServoAngle = candidate;
+          targetServoAngle = candidate;
         }
       }
     }
 
-    // Calculate servo error and set target
-    wrappedServoError = desiredServoAngle - currentServoAngle;
-    adjustedTarget = desiredServoAngle;
+    // Calculate error directly in unwrapped space (like motor encoder code)
+    servoError = targetServoAngle - unwrappedServoAngle;
 
-    // Use PID controller with current position and adjusted target
-    angleController.setSetPoint(adjustedTarget);
-    servoPower = angleController.calculate(currentServoAngle);
+    // Use PID controller with unwrapped values
+    angleController.setSetPoint(targetServoAngle);
+    servoPower = angleController.calculate(unwrappedServoAngle);
 
     // Add direction-specific feedforward term to overcome friction/deadband
-    if (wrappedServoError > 0) {
+    if (servoError > 0) {
       servoPower += kF_left;  // Moving left (positive power)
-    } else if (wrappedServoError < 0) {
+    } else if (servoError < 0) {
       servoPower += kF_right; // Moving right (negative power)
     }
 
@@ -250,15 +265,6 @@ public class Turret extends WSubsystem {
   }
 
   /**
-   * Get the desired turret angle after range limiting
-   * @return Desired turret angle in degrees
-   */
-  public double getDesiredTurretAngle() {
-    return desiredTurretAngle;
-  }
-
-
-  /**
    * Get the current servo power being applied
    * @return Servo power from -1.0 to 1.0
    */
@@ -267,11 +273,11 @@ public class Turret extends WSubsystem {
   }
 
   /**
-   * Get the error between desired and current servo angle (wrapped)
+   * Get the error between desired and current servo angle (unwrapped)
    * @return Error in degrees
    */
   public double getServoError() {
-    return wrappedServoError;
+    return servoError;
   }
 
   public InstantCommand TargetAngle(double Angle){
