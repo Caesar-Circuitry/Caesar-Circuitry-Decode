@@ -4,6 +4,7 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.qualcomm.robotcore.eventloop.opmode.LinearOpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.AnalogInput;
@@ -16,6 +17,7 @@ import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
 
 @Configurable
 @TeleOp
+@Disabled
 public class DualPIDContinuousServoTesterPinpoint extends LinearOpMode {
   private CRServo servo;
   private CRServo servo2;

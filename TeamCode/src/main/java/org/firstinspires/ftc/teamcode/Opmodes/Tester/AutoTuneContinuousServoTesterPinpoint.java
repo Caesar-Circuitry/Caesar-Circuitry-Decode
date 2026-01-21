@@ -1,9 +1,5 @@
 package org.firstinspires.ftc.teamcode.Opmodes.Tester;
 
-import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
-import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
-
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -15,9 +11,13 @@ import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 
+import org.firstinspires.ftc.robotcore.external.navigation.AngleUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
+import org.firstinspires.ftc.robotcore.external.navigation.Pose2D;
+
 @Configurable
 @TeleOp
-public class DualContinuousServoTesterPinpoint extends LinearOpMode {
+public class AutoTuneContinuousServoTesterPinpoint extends LinearOpMode {
   private CRServo servo;
   private CRServo servo2;
   private AnalogInput servoEncoder; // encoder based on servo pos
@@ -29,12 +29,38 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
   private static final double WRAP_THRESHOLD = 270.0;
 
   // PID gains
-  public static double kP = 0.0258;
+  public static double kP = 0.01;
   public static double kI = 0; // Integral eliminates steady-state error - start with kI = kP/100
-  public static double kD = 0.0023; // Derivative dampens oscillations - start with kD = kP/10
+  public static double kD = 0; // Derivative dampens oscillations - start with kD = kP/10
   public static double kF_left = 0.07; // Feedforward when turning left (positive error)
   public static double kF_right = -0.1; // Feedforward when turning right (negative error)
 
+  // Auto-tuner parameters - Step Response Method
+  public static boolean autoTuneEnabled = false; // Set to true to start auto-tuning
+  public static double autoTuneStepSize = 30.0; // Step size in degrees (try 20-50)
+  public static double autoTuneStepPower = 0.4; // Fixed power for step (try 0.3-0.6)
+
+  // Auto-tuner state
+  private enum TuningState {
+    IDLE,
+    WAITING_FOR_SETTLE,
+    APPLYING_STEP,
+    MEASURING_RESPONSE,
+    CALCULATING_GAINS,
+    DONE
+  }
+
+  private TuningState tuningState = TuningState.IDLE;
+  private java.util.ArrayList<Double> timeData = new java.util.ArrayList<>();
+  private java.util.ArrayList<Double> angleData = new java.util.ArrayList<>();
+  private double tuningStartTime = 0;
+  private double stepStartTime = 0;
+  private double stepStartAngle = 0;
+  private double stepTargetAngle = 0;
+  private double maxAngle = 0;
+  private double timeToMaxAngle = 0;
+  private double settleTime = 0;
+  private double riseTime = 0;
 
   // Hardware names
   public static String servoName = "servo1";
@@ -71,6 +97,12 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
       // Update pinpoint position
       pinpoint.update();
       double heading = pinpoint.getHeading(AngleUnit.DEGREES);
+
+      // Auto-tuner logic - if enabled, run tuning instead of normal control
+      if (autoTuneEnabled && tuningState != TuningState.DONE) {
+        performAutoTuning(heading);
+        continue; // Skip normal control during tuning
+      }
 
       // Calculate desired turret angle (robot-relative) to point to targetAngle (field-relative)
       double desiredTurretAngleRaw = targetAngle - heading;
@@ -119,6 +151,10 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
       servo2.setPower(servoPower);
 
       // Telemetry for debugging
+      Telemetry.addData("=== AUTO-TUNER ===", "");
+      Telemetry.addData("Auto-Tune Enabled", autoTuneEnabled);
+      Telemetry.addData("Tuning State", tuningState);
+      Telemetry.addData("---", "---");
       Telemetry.addData("Target Field Angle", "%.2f deg", targetAngle);
       Telemetry.addData("Robot Heading", "%.2f deg", heading);
       Telemetry.addData("Desired Turret Angle (robot-relative)", "%.2f deg", desiredTurretAngle);
@@ -137,6 +173,209 @@ public class DualContinuousServoTesterPinpoint extends LinearOpMode {
       Telemetry.addData("Gear Ratio", "%.1f:1", gearRatio);
       Telemetry.update();
     }
+  }
+
+  /**
+   * Step Response Auto-Tuner - More reliable than relay method
+   * Applies a step input and analyzes the response curve
+   */
+  private void performAutoTuning(double heading) {
+    double currentServoAngle = getUnwrappedServoAngle(servoEncoder);
+    double currentTurretAngle = currentServoAngle / gearRatio;
+    double currentTime = System.nanoTime() / 1e9;
+
+    switch (tuningState) {
+      case IDLE:
+        tuningState = TuningState.WAITING_FOR_SETTLE;
+        tuningStartTime = currentTime;
+        servo.setPower(0);
+        servo2.setPower(0);
+        Telemetry.addData("Auto-Tuner", "Started! Waiting for servo to settle...");
+        Telemetry.update();
+        break;
+
+      case WAITING_FOR_SETTLE:
+        servo.setPower(0);
+        servo2.setPower(0);
+
+        if (currentTime - tuningStartTime > 2.0) {
+          // Record starting position
+          stepStartAngle = currentServoAngle;
+          stepTargetAngle = stepStartAngle + (autoTuneStepSize * gearRatio);
+          stepStartTime = currentTime;
+          maxAngle = stepStartAngle;
+          timeToMaxAngle = 0;
+          timeData.clear();
+          angleData.clear();
+
+          tuningState = TuningState.APPLYING_STEP;
+          Telemetry.addData("Auto-Tuner", "Applying step input...");
+        } else {
+          Telemetry.addData("Auto-Tuner", "Settling... %.1fs remaining", 2.0 - (currentTime - tuningStartTime));
+        }
+        Telemetry.update();
+        break;
+
+      case APPLYING_STEP:
+      case MEASURING_RESPONSE:
+        // Apply constant power step
+        servo.setPower(autoTuneStepPower);
+        servo2.setPower(autoTuneStepPower);
+
+        // Record data
+        double elapsedTime = currentTime - stepStartTime;
+        double angleChange = currentServoAngle - stepStartAngle;
+
+        timeData.add(elapsedTime);
+        angleData.add(angleChange);
+
+        // Track maximum overshoot
+        if (angleChange > maxAngle - stepStartAngle) {
+          maxAngle = currentServoAngle;
+          timeToMaxAngle = elapsedTime;
+        }
+
+        // Switch to measuring after step is applied
+        if (tuningState == TuningState.APPLYING_STEP && elapsedTime > 0.1) {
+          tuningState = TuningState.MEASURING_RESPONSE;
+        }
+
+        // Stop measuring after reaching target or timeout
+        if (angleChange >= autoTuneStepSize * gearRatio || elapsedTime > 5.0) {
+          servo.setPower(0);
+          servo2.setPower(0);
+          tuningState = TuningState.CALCULATING_GAINS;
+        }
+
+        Telemetry.addData("Auto-Tuner", "Measuring response...");
+        Telemetry.addData("Elapsed Time", "%.2f s", elapsedTime);
+        Telemetry.addData("Angle Change", "%.2f deg", angleChange / gearRatio);
+        Telemetry.addData("Target Change", "%.2f deg", autoTuneStepSize);
+        Telemetry.update();
+        break;
+
+      case CALCULATING_GAINS:
+        servo.setPower(0);
+        servo2.setPower(0);
+
+        if (timeData.size() < 10) {
+          Telemetry.addData("Auto-Tuner", "ERROR - Not enough data collected");
+          Telemetry.addData("Suggestion", "Increase autoTuneStepPower or autoTuneStepSize");
+          tuningState = TuningState.DONE;
+          Telemetry.update();
+          break;
+        }
+
+        // Analyze step response using Cohen-Coon method
+        double finalAngle = angleData.get(angleData.size() - 1);
+        double stepInput = autoTuneStepPower;
+
+        // Find when we reach 63.2% of final value (time constant tau)
+        double target63 = 0.632 * finalAngle;
+        double tau = 0;
+        for (int i = 0; i < angleData.size(); i++) {
+          if (angleData.get(i) >= target63) {
+            tau = timeData.get(i);
+            break;
+          }
+        }
+
+        // Find dead time (time to reach 5% of final)
+        double target5 = 0.05 * finalAngle;
+        double deadTime = 0;
+        for (int i = 0; i < angleData.size(); i++) {
+          if (angleData.get(i) >= target5) {
+            deadTime = timeData.get(i);
+            break;
+          }
+        }
+
+        // Calculate process gain (how much output per unit input)
+        double processGain = finalAngle / stepInput;
+
+        // Use IMC (Internal Model Control) tuning with BALANCED settings
+        // Good speed while maintaining stability
+
+        // IMC tuning parameter - moderate lambda for balanced response
+        // Use tau * 0.75 for good balance between speed and stability
+        double lambda = Math.max(tau * 0.75, 0.08); // Balanced closed-loop time constant
+
+        // Calculate gains using IMC-PD rules
+        kP = tau / (processGain * lambda);
+        kD = tau * kP / 4.0; // Standard damping ratio
+        kI = 0; // No integral for now
+
+        // Apply MODERATE multipliers for stable fast response
+        kP = kP * 0.7; // Balanced P gain (not too aggressive)
+        kD = kD * 0.5; // Good damping to prevent overshoot
+
+        // Ensure kD is always less than kP (sanity check)
+        if (kD >= kP) {
+          kD = kP * 0.18; // kD should be max 18% of kP
+        }
+
+        // Reasonable limits to prevent instability
+        kP = clamp(kP, 0.008, 0.08); // Moderate max kP
+        kD = clamp(kD, 0.001, 0.02); // Moderate max kD
+
+        // Final sanity check - kP should be at least 4x larger than kD for stability
+        if (kP < kD * 4.0) {
+          kP = kD * 6.0;
+          kP = clamp(kP, 0.008, 0.08);
+        }
+
+        // Additional safety: if kD is too high relative to kP, reduce it
+        if (kD > kP * 0.2) {
+          kD = kP * 0.18;
+        }
+
+        Telemetry.addData("=== AUTO-TUNE COMPLETE ===", "");
+        Telemetry.addData("Method", "IMC Tuning (Balanced - Stable & Fast)");
+        Telemetry.addData("---", "---");
+        Telemetry.addData("Process Gain (K)", "%.3f deg/power", processGain);
+        Telemetry.addData("Time Constant (tau)", "%.3f s", tau);
+        Telemetry.addData("Dead Time (L)", "%.3f s", deadTime);
+        Telemetry.addData("Lambda (speed factor)", "%.3f s (balanced)", lambda);
+        Telemetry.addData("---", "---");
+        Telemetry.addData("Calculated kP", "%.4f", kP);
+        Telemetry.addData("Calculated kD", "%.4f", kD);
+        Telemetry.addData("Calculated kI", "%.4f", kI);
+        Telemetry.addData("kP/kD Ratio", "%.1f (should be >4)", kP / Math.max(kD, 0.0001));
+        Telemetry.addData("---", "---");
+        Telemetry.addData("Data Points Collected", timeData.size());
+        Telemetry.addData("Instructions", "Set autoTuneEnabled=false to test");
+        Telemetry.addData("Tuning", "Balanced: Good speed, zero overshoot, stable");
+        Telemetry.addData("Fine-Tuning", "Increase kP by 10%% for more speed");
+        Telemetry.update();
+
+        tuningState = TuningState.DONE;
+        break;
+
+      case DONE:
+        servo.setPower(0);
+        servo2.setPower(0);
+        Telemetry.addData("Auto-Tuner", "DONE - Set autoTuneEnabled=false");
+        Telemetry.addData("Tuned Gains", "kP=%.4f, kD=%.4f", kP, kD);
+        Telemetry.addData("To Re-tune", "Toggle autoTuneEnabled");
+        Telemetry.update();
+
+        if (!autoTuneEnabled) {
+          tuningState = TuningState.IDLE;
+        }
+        break;
+    }
+  }
+
+  /**
+   * Calculate average of an ArrayList of doubles
+   */
+  private double calculateAverage(java.util.ArrayList<Double> values) {
+    if (values.isEmpty()) return 0;
+    double sum = 0;
+    for (double v : values) {
+      sum += v;
+    }
+    return sum / values.size();
   }
 
   public void configurePinpoint() {

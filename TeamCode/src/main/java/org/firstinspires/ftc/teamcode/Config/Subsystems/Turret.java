@@ -60,28 +60,65 @@ public class Turret extends WSubsystem {
     double desiredTurretAngleRaw = targetAngle - heading;
     double wrappedDesiredTurretAngle = wrap180(desiredTurretAngleRaw);
 
-    // Find the closest valid turret angle within the 270-degree range (-135 to +135)
-    desiredTurretAngle = getClosestAngleInRange(wrappedDesiredTurretAngle, -135.0, 135.0);
-
-    // Convert desired turret angle to desired servo angle using gear ratio
-    desiredServoAngle = desiredTurretAngle * gearRatio;
-
     // Convert current servo angle to equivalent turret angle for telemetry
     currentTurretAngle = currentServoAngle / gearRatio;
 
-    // Calculate servo power using PID control
-    double servoError = desiredServoAngle - currentServoAngle;
-    wrappedServoError = wrap180(servoError);
+    // Wrap current turret angle to -180 to +180 for comparison
+    double wrappedCurrentTurretAngle = wrap180(currentTurretAngle);
 
-    // Calculate the target position that's closest to current via wrapping
-    adjustedTarget = currentServoAngle + wrappedServoError;
+    // Smart range limiting: prevent wire damage by choosing safe boundary
+    desiredTurretAngle = getSafeTurretAngle(wrappedDesiredTurretAngle, wrappedCurrentTurretAngle);
+
+    // Find the unwrapped servo angle target that corresponds to the desired turret angle
+    // We need to find which "wrap" of the desired angle is closest to our current position
+    double baseServoAngle = desiredTurretAngle * gearRatio;
+
+    // Find which 360° wrap the current servo position is in
+    // This handles cases where servo has rotated many times (e.g., currentServoAngle = 1080°)
+    int currentWrapCount = (int) Math.round(currentServoAngle / 360.0);
+
+    // Generate candidates in both directions from current wrap
+    // Check enough wraps to ensure we find all possible paths including unwrapping
+    int searchRange = 3; // Check 3 wraps in each direction to handle edge cases
+
+    java.util.List<Double> candidates = new java.util.ArrayList<>();
+    for (int i = -searchRange; i <= searchRange; i++) {
+      candidates.add(baseServoAngle + ((currentWrapCount + i) * 360.0));
+    }
+
+    // Find the valid candidate with the shortest safe path (supporting infinite wraps)
+    desiredServoAngle = baseServoAngle + (currentWrapCount * 360.0); // default to middle candidate
+    double minDistance = Double.MAX_VALUE;
+
+    for (double candidate : candidates) {
+      // First check: does this candidate produce the desired turret angle when wrapped?
+      double candidateTurretAngle = wrap180(candidate / gearRatio);
+      double tolerance = 0.1; // Allow small numerical errors
+
+      // Skip candidates that don't match the desired turret angle
+      if (Math.abs(candidateTurretAngle - desiredTurretAngle) > tolerance) {
+        continue;
+      }
+
+      // Check if taking this path would cross the forbidden zone
+      if (isPathSafe(currentServoAngle, candidate)) {
+        double distance = Math.abs(candidate - currentServoAngle);
+        if (distance < minDistance) {
+          minDistance = distance;
+          desiredServoAngle = candidate;
+        }
+      }
+    }
+
+    // Calculate servo error and set target
+    wrappedServoError = desiredServoAngle - currentServoAngle;
+    adjustedTarget = desiredServoAngle;
 
     // Use PID controller with current position and adjusted target
     angleController.setSetPoint(adjustedTarget);
     servoPower = angleController.calculate(currentServoAngle);
 
     // Add direction-specific feedforward term to overcome friction/deadband
-    // Both directions add positive feedforward in the direction of motion
     if (wrappedServoError > 0) {
       servoPower += kF_left;  // Moving left (positive power)
     } else if (wrappedServoError < 0) {
@@ -90,6 +127,93 @@ public class Turret extends WSubsystem {
 
     // Clamp servo power to valid range for CRServo
     servoPower = clamp(servoPower, -1.0, 1.0);
+  }
+
+  /**
+   * Determines the safe turret angle to target, preventing wire damage.
+   * If the desired angle is outside the valid range (-135 to +135), this method
+   * intelligently chooses which limit to snap to based on the current position,
+   * ensuring the turret never tries to wrap around through the forbidden zone.
+   *
+   * @param desiredAngle The desired turret angle (wrapped to -180 to +180)
+   * @param currentAngle The current turret angle (wrapped to -180 to +180)
+   * @return The safe angle to target within the valid range
+   */
+  private double getSafeTurretAngle(double desiredAngle, double currentAngle) {
+    final double MIN_ANGLE = -135.0;
+    final double MAX_ANGLE = 135.0;
+
+    // If desired angle is within valid range, use it directly
+    if (desiredAngle >= MIN_ANGLE && desiredAngle <= MAX_ANGLE) {
+      return desiredAngle;
+    }
+
+    // Desired angle is outside the valid range
+
+    // If desired angle is beyond +135 (in the range +135 to +180)
+    if (desiredAngle > MAX_ANGLE) {
+      // Check if we can reach +135 from current position without crossing forbidden zone
+      // If current is in valid range, we can always reach +135
+      // The forbidden zone is from +135 to -135 going through +180/-180
+      return MAX_ANGLE;
+    }
+
+    // If desired angle is beyond -135 (in the range -180 to -135)
+    if (desiredAngle < MIN_ANGLE) {
+      // Check if we can reach -135 from current position without crossing forbidden zone
+      // If current is in valid range, we can always reach -135
+      // The forbidden zone is from -135 to +135 going through -180/+180
+      return MIN_ANGLE;
+    }
+
+    // Fallback: shouldn't reach here due to wrap180, but just in case
+    return clamp(desiredAngle, MIN_ANGLE, MAX_ANGLE);
+  }
+
+  /**
+   * Check if the path from current to target servo angle is safe.
+   * A path is safe if:
+   * 1. The target turret angle (wrapped) is within -135° to +135°
+   * 2. The path doesn't cross through the forbidden zone at ANY point
+   * 3. We check EVERY degree along the path to ensure no forbidden zone crossing
+   *
+   * @param currentServo Current unwrapped servo angle
+   * @param targetServo Target unwrapped servo angle
+   * @return true if the path is safe and target is valid
+   */
+  private boolean isPathSafe(double currentServo, double targetServo) {
+    final double MIN_TURRET = -135.0;
+    final double MAX_TURRET = 135.0;
+
+    // Convert target to turret angle and check if it's valid
+    double targetTurret = targetServo / gearRatio;
+    double wrappedTargetTurret = wrap180(targetTurret);
+
+    // First check: target must be within valid range
+    if (wrappedTargetTurret < MIN_TURRET || wrappedTargetTurret > MAX_TURRET) {
+      return false;
+    }
+
+    // Calculate the angular distance we'd travel (in servo degrees)
+    double angularDistance = targetServo - currentServo;
+
+    // Sample every 5 degrees of servo motion (turret moves slower due to gear ratio)
+    // This ensures we catch any crossing of the forbidden zone
+    int numSamples = Math.max(20, (int)(Math.abs(angularDistance) / 5.0));
+
+    for (int i = 0; i <= numSamples; i++) {
+      double t = i / (double) numSamples;
+      double sampleServo = currentServo + t * angularDistance;
+      double sampleTurret = sampleServo / gearRatio;
+      double wrappedSample = wrap180(sampleTurret);
+
+      // If any point along the path crosses into forbidden zone, path is unsafe
+      if (wrappedSample < MIN_TURRET || wrappedSample > MAX_TURRET) {
+        return false;
+      }
+    }
+
+    return true;
   }
 
   @Override

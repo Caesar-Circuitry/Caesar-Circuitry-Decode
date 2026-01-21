@@ -53,15 +53,15 @@ public class Constants {
     public static final double FEEDER_SERVO_OPEN = 0.5;
     public static final double FEEDER_SERVO_CLOSE = 0.63;
 
-    public static final double INTAKE_MOTOR_FORWARD = 1.0;
+    public static final double INTAKE_MOTOR_FORWARD = -1.0;
     public static final double INTAKE_MOTOR_REVERSE = -1.0;
     public static final double INTAKE_MOTOR_HOLD = 0;
-    public static final double INTAKE_MOTOR_HP = -0.5;
+    public static final double INTAKE_MOTOR_HP = 0.5;
 
-    public static final double TRANSFER_MOTOR_FORWARD = 1.0;
+    public static final double TRANSFER_MOTOR_FORWARD = -1.0;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
     public static final double TRANSFER_MOTOR_HOLD = 0;
-    public static final double TRANSFER_MOTOR_HP = -0.5;
+    public static final double TRANSFER_MOTOR_HP = 0.5;
   }
 
   @Configurable
@@ -75,9 +75,9 @@ public class Constants {
 
       public static final double kP = 0.008;
       public static final double kI = 0;
-      public static final double kD = 0;
+      public static final double kD = 0.000;
       public static final double kF_left = 0.07; // Feedforward when turning left (positive error)
-      public static final double kF_right = -0.1; // Feedforward when turning right (negative error)
+      public static final double kF_right = -0.06; // Feedforward when turning right (negative error)
 
       public static final double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red

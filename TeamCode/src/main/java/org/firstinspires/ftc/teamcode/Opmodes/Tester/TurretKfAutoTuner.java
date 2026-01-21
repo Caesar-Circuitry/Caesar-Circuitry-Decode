@@ -12,7 +12,6 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 
 @Configurable
 @TeleOp(name = "Turret KF Auto Tuner")
-@Disabled
 public class TurretKfAutoTuner extends LinearOpMode {
   private CRServo servo;
   private CRServo servo2;

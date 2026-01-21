@@ -82,6 +82,8 @@
 
   private void driverTriggerCommands() {
       hardware.getIntake().setDefaultCommand(new IntakeOff(hardware.getIntake()));
+      RightBumper.whenReleased(hardware.getIntake().Hold());
+      LeftBumper.whenReleased(hardware.getIntake().Hold());
       RightBumper.whileHeld(hardware.getIntake().GroundIntake());
       LeftBumper.whileHeld(hardware.getIntake().HP_Intaking());
       Left.whenActive(hardware.getLauncher().LaunchClose());
