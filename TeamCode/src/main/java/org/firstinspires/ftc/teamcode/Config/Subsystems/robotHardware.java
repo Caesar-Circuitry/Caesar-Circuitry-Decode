@@ -12,7 +12,7 @@ import com.qualcomm.hardware.lynx.LynxModule;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 public class robotHardware extends WSubsystem {
-  private Follower m_follower;
+  private Drivetrain drivetrain;
   private Launcher Launcher;
   private Intake Intake;
   private Turret Turret;
@@ -25,18 +25,18 @@ public class robotHardware extends WSubsystem {
     this.hardwareMap = hardwareMap;
     this.hubs = hardwareMap.getAll(LynxModule.class);
     hubs.forEach(hub -> hub.setBulkCachingMode(LynxModule.BulkCachingMode.MANUAL));
-    this.m_follower = PedroConstants.createFollower(hardwareMap);
-    this.m_follower.setStartingPose(new Pose(0,0,0));
+    this.drivetrain = new Drivetrain(hardwareMap);
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
-    this.Turret = new Turret(hardwareMap,m_follower);
-    this.vision = new Vision(hardwareMap,m_follower,Turret);
+    this.Turret = new Turret(hardwareMap,drivetrain.getFollower());
+    this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
     this.telemetry = new LinkedList<TelemetryPacket>();
 
   }
 
   @Override
   public void read() {
+    drivetrain.read();
     Launcher.read();
     Intake.read();
     Turret.read();
@@ -45,7 +45,7 @@ public class robotHardware extends WSubsystem {
 
   @Override
   public void loop() {
-    m_follower.update();
+    drivetrain.loop();
     Launcher.loop();
     Intake.loop();
     Turret.loop();
@@ -54,6 +54,7 @@ public class robotHardware extends WSubsystem {
 
   @Override
   public void write() {
+    drivetrain.write();
     Launcher.write();
     Intake.write();
     Turret.write();
@@ -64,6 +65,7 @@ public class robotHardware extends WSubsystem {
 
     @Override
     public LinkedList<TelemetryPacket> getTelemetry() {
+        telemetry.addAll(drivetrain.getTelemetry());
         telemetry.addAll(Launcher.getTelemetry());
         telemetry.addAll(Intake.getTelemetry());
         telemetry.addAll(Turret.getTelemetry());
@@ -72,7 +74,7 @@ public class robotHardware extends WSubsystem {
     }
 
     public Follower getFollower() {
-    return m_follower;
+    return drivetrain.getFollower();
   }
   public Launcher getLauncher(){
       return Launcher;

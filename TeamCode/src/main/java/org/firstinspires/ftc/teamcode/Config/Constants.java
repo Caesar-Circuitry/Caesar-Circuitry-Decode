@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Config;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.configurables.annotations.Sorter;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
 @Configurable
 public class Constants {
@@ -125,6 +126,12 @@ public class Constants {
       public static final double LOOP_TIME = 0.02; // 20ms = 50Hz
 
       // Telemetry logging toggle for Vision subsystem
+      public static boolean logTelemetry = false;
+  }
+  public static class Drivetrain {
+      public static final Pose startPose = new Pose(0, 0, 0);
+
+      // Telemetry logging toggle for Drivetrain
       public static boolean logTelemetry = false;
   }
 }
