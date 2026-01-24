@@ -1,10 +1,12 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
 import java.util.List;
+import java.util.LinkedList;
 
 import org.firstinspires.ftc.teamcode.Config.Commands.IntakeOff;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics;
+import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
@@ -32,6 +34,8 @@ public class Launcher extends WSubsystem {
   private ElapsedTime voltageTimer = new ElapsedTime();
 
   private double compensatedPower = 0.0;
+
+  private final LinkedList<TelemetryPacket> telemetryPackets = new LinkedList<>();
 
   public Launcher(HardwareMap hardwareMap) {
     // Initialize motors
@@ -109,6 +113,21 @@ public class Launcher extends WSubsystem {
       compensatedPower = basePower * (Constants.Launcher.NOMINAL_BATTERY_VOLTAGE / batteryVoltage);
       compensatedPower = MathUtils.clamp(compensatedPower, -1, 1);
     }
+
+    // Telemetry logging
+    if (Constants.Launcher.logTelemetry) {
+      telemetryPackets.clear();
+      telemetryPackets.add(new TelemetryPacket("Target Velocity", flywheelTargetVelocity));
+      telemetryPackets.add(new TelemetryPacket("Actual Velocity", flywheelVelocity));
+      telemetryPackets.add(new TelemetryPacket("Velocity Error", getError()));
+      telemetryPackets.add(new TelemetryPacket("Compensated Power", compensatedPower));
+      telemetryPackets.add(new TelemetryPacket("Battery Voltage", batteryVoltage));
+      telemetryPackets.add(new TelemetryPacket("StopPower", stopPower));
+      telemetryPackets.add(new TelemetryPacket("kP", Constants.Launcher.kP));
+      telemetryPackets.add(new TelemetryPacket("kI", Constants.Launcher.kI));
+      telemetryPackets.add(new TelemetryPacket("kD", Constants.Launcher.kD));
+      telemetryPackets.add(new TelemetryPacket("kS", Constants.Launcher.kS));
+    }
   }
 
   @Override
@@ -178,5 +197,10 @@ public class Launcher extends WSubsystem {
   }
   public void setStopPower(boolean stopPower){
       this.stopPower = stopPower;
+  }
+
+  @Override
+  public LinkedList<TelemetryPacket> getTelemetry() {
+    return telemetryPackets;
   }
 }

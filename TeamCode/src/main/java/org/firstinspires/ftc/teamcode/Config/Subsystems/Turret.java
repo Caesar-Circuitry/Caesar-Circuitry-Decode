@@ -7,8 +7,12 @@ import com.pedropathing.follower.Follower;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
+
 import org.firstinspires.ftc.teamcode.Config.Utils.AxonEncoder;
 import org.firstinspires.ftc.teamcode.Config.Utils.AnglePIDF;
+import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
+
+import java.util.LinkedList;
 
 
 public class Turret extends WSubsystem {
@@ -31,6 +35,7 @@ public class Turret extends WSubsystem {
   private double servoPower = 0;
 
   // Loop intermediate values (for telemetry/debugging)
+  private LinkedList<TelemetryPacket> telemetryPackets;
   private double unwrappedServoAngle = 0;
   private double desiredTurretAngle = 0;
   private double safeTurretAngle = 0;
@@ -43,7 +48,7 @@ public class Turret extends WSubsystem {
       turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, 180.0);
       this.follower = follower;
       angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
-
+      telemetryPackets = new LinkedList<TelemetryPacket>();
       targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
   }
 
@@ -74,6 +79,35 @@ public class Turret extends WSubsystem {
     servoError = targetServoAngle - unwrappedServoAngle;
     angleController.setSetPoint(targetServoAngle);
     servoPower = clamp(angleController.calculate(unwrappedServoAngle), -1.0, 1.0);
+
+    // Log telemetry if enabled
+    if (logTelemetry) {
+        telemetryPackets.clear(); // Clear previous packets
+
+        // Configuration
+        telemetryPackets.addLast(new TelemetryPacket("Target Angle (Field)", targetAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Target Angle (Robot)", robotRelativeTargetAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Pinpoint Tracking", trackPinpoint));
+
+        // Sensor readings
+        telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
+        telemetryPackets.addLast(new TelemetryPacket("Raw Encoder", turretEncoder.getRawAngle()));
+
+        // Loop calculations
+        telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Current Turret", currentTurretAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Desired Turret", desiredTurretAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Safe Turret", safeTurretAngle));
+        telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
+
+        // Control output
+        telemetryPackets.addLast(new TelemetryPacket("Servo Error", servoError));
+        telemetryPackets.addLast(new TelemetryPacket("Servo Power", servoPower));
+
+        // PIDF state
+        telemetryPackets.addLast(new TelemetryPacket("PIDF Error", angleController.getLastError()));
+        telemetryPackets.addLast(new TelemetryPacket("PIDF Integral", angleController.getIntegral()));
+    }
   }
 
 
@@ -121,121 +155,20 @@ public class Turret extends WSubsystem {
     return trackPinpoint;
   }
 
-  // Getters for debugging and telemetry
-
-  /**
-   * Get the target angle (field-relative)
-   * @return Target angle in degrees
-   */
-  public double getTargetAngle() {
-    return targetAngle;
-  }
-
-  /**
-   * Get the robot-relative target angle
-   * @return Robot-relative target angle in degrees
-   */
-  public double getRobotRelativeTargetAngle() {
-    return robotRelativeTargetAngle;
-  }
-
-  /**
-   * Get the robot heading from pinpoint
-   * @return Robot heading in degrees
-   */
-  public double getHeading() {
-    return heading;
-  }
-
-  /**
-   * Get the current turret angle (robot-relative)
-   * @return Current turret angle in degrees
-   */
-  public double getCurrentTurretAngle() {
-    return currentTurretAngle;
-  }
-
-  /**
-   * Get the current unwrapped turret angle
-   * @return Current unwrapped turret angle in degrees
-   */
-  public double getUnwrappedTurretAngle() {
-    return turretEncoder.getUnwrappedOutputAngle();
-  }
-
-  /**
-   * Get the target servo angle (unwrapped)
-   * @return Target servo angle in degrees
-   */
-  public double getTargetServoAngle() {
-    return targetServoAngle;
-  }
-
-  /**
-   * Get the current servo angle (unwrapped)
-   * @return Current servo angle in degrees
-   */
-  public double getCurrentServoAngle() {
-    return turretEncoder.getUnwrappedEncoderAngle();
-  }
-
-  /**
-   * Get the error between desired and current servo angle (unwrapped)
-   * @return Error in degrees
-   */
-  public double getServoError() {
-    return servoError;
-  }
-
-  /**
-   * Get the current servo power being applied
-   * @return Servo power from -1.0 to 1.0
-   */
-  public double getServoPower() {
-    return servoPower;
-  }
-
-  /**
-   * Get the raw encoder angle (0-360)
-   * @return Raw encoder angle in degrees
-   */
-  public double getRawEncoderAngle() {
-    return turretEncoder.getRawAngle();
-  }
-
-  /**
-   * Get the wrapped turret angle (-180 to 180)
-   * @return Wrapped turret angle in degrees
-   */
-  public double getWrappedTurretAngle() {
-    return wrap180(currentTurretAngle);
-  }
-
-  /**
-   * Get the unwrapped servo angle (intermediate calculation)
-   * @return Unwrapped servo angle in degrees
-   */
-  public double getUnwrappedServoAngle() {
-    return unwrappedServoAngle;
-  }
-
-  /**
-   * Get the desired turret angle (before safety limits)
-   * @return Desired turret angle in degrees
-   */
-  public double getDesiredTurretAngle() {
-    return desiredTurretAngle;
-  }
-
-  /**
-   * Get the safe turret angle (after safety limits applied)
-   * @return Safe turret angle in degrees
-   */
-  public double getCalculatedSafeTurretAngle() {
-    return safeTurretAngle;
+  @Override
+  public LinkedList<TelemetryPacket> getTelemetry(){
+      return telemetryPackets;
   }
 
   public InstantCommand TargetAngle(double Angle){
       return new InstantCommand(()->setTargetAngle(Angle));
+  }
+
+  /**
+   * Minimal getter required by Vision subsystem to compute camera orientation.
+   * @return current turret angle in degrees (robot-relative)
+   */
+  public double getCurrentTurretAngle() {
+      return currentTurretAngle;
   }
 }

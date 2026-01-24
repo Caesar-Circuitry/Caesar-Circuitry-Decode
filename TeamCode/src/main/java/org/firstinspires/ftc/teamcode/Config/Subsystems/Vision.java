@@ -9,7 +9,9 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.robotcore.external.navigation.Pose3D;
 import org.firstinspires.ftc.teamcode.Config.Constants;
+import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
+import java.util.LinkedList;
 import java.util.List;
 
 public class Vision extends WSubsystem {
@@ -26,6 +28,8 @@ public class Vision extends WSubsystem {
 
     private boolean initialized = false;
     private boolean enablePoseCorrection = true; // Flag to enable/disable pose correction
+
+    private LinkedList<TelemetryPacket> telemetryPackets = new LinkedList<>();
 
 
     public Vision(HardwareMap hardwareMap, Follower follower, Turret turret){
@@ -61,7 +65,6 @@ public class Vision extends WSubsystem {
         double cameraHeading = robotHeading + turretAngleRad;
 
         // Update Limelight with camera's orientation for MT2
-        // This ensures MT2 uses the correct heading to resolve AprilTag ambiguity
         limelight.updateRobotOrientation(Math.toDegrees(cameraHeading));
 
         // Predict step - runs every loop (only increases uncertainty)
@@ -69,43 +72,85 @@ public class Vision extends WSubsystem {
         yDriftFilter.predict();
         headingDriftFilter.predict();
 
+        Double visionX = null, visionY = null, visionHeading = null;
+        Double correctedX = null, correctedY = null, correctedHeading = null;
+
         // Update step - only when vision is available
         if (results != null && results.isValid()) {
-            // MT2 now uses the camera heading we just set
             Pose3D botPose = results.getBotpose_MT2();
 
             if (botPose != null) {
-                // Get vision measurements (camera position from field)
                 double limelightX = botPose.getPosition().x;
                 double limelightY = botPose.getPosition().y;
                 double limelightHeading = Math.toRadians(botPose.getOrientation().getYaw());
 
-                // Transform vision measurements from turret-mounted camera to robot center
                 double[] robotPose = transformLimelightToRobot(limelightX, limelightY, limelightHeading);
-                double visionX = robotPose[0];
-                double visionY = robotPose[1];
-                double visionHeading = robotPose[2];
+                visionX = robotPose[0];
+                visionY = robotPose[1];
+                visionHeading = robotPose[2];
 
-                // Get odometry readings (from Pinpoint via follower)
                 double odometryX = odometryPose.getX();
                 double odometryY = odometryPose.getY();
                 double odometryHeading = odometryPose.getHeading();
 
-                // Update drift estimates using vision and odometry
                 xDriftFilter.update(visionX, odometryX);
                 yDriftFilter.update(visionY, odometryY);
                 headingDriftFilter.update(visionHeading, odometryHeading);
 
-                // Only update follower pose if pose correction is enabled
                 if (enablePoseCorrection) {
-                    // Calculate corrected pose: actual position = odometry - drift
-                    double correctedX = odometryX - xDriftFilter.getDrift();
-                    double correctedY = odometryY - yDriftFilter.getDrift();
-                    double correctedHeading = normalizeAngle(odometryHeading - headingDriftFilter.getDrift());
+                    correctedX = odometryX - xDriftFilter.getDrift();
+                    correctedY = odometryY - yDriftFilter.getDrift();
+                    correctedHeading = normalizeAngle(odometryHeading - headingDriftFilter.getDrift());
 
-                    // Update follower with drift-corrected pose
                     follower.setPose(new Pose(correctedX, correctedY, correctedHeading));
                 }
+            }
+        }
+
+        // Telemetry logging
+        if (Constants.Vision.logTelemetry) {
+            telemetryPackets.clear();
+
+            // Configuration & flags
+            telemetryPackets.add(new TelemetryPacket("PoseCorrectionEnabled", enablePoseCorrection));
+
+            // Odometry
+            telemetryPackets.add(new TelemetryPacket("Odo X", odometryPose.getX()));
+            telemetryPackets.add(new TelemetryPacket("Odo Y", odometryPose.getY()));
+            telemetryPackets.add(new TelemetryPacket("Odo Heading(rad)", robotHeading));
+
+            // Turret & camera orientation
+            telemetryPackets.add(new TelemetryPacket("Turret Angle(deg)", turret.getCurrentTurretAngle()));
+            telemetryPackets.add(new TelemetryPacket("Camera Heading(deg)", Math.toDegrees(cameraHeading)));
+
+            // Raw vision (MT2)
+            telemetryPackets.add(new TelemetryPacket("Vision Valid", results != null && results.isValid()));
+            if (results != null && results.isValid()) {
+                Pose3D mt2Pose = results.getBotpose_MT2();
+                if (mt2Pose != null) {
+                    telemetryPackets.add(new TelemetryPacket("MT2 X", mt2Pose.getPosition().x));
+                    telemetryPackets.add(new TelemetryPacket("MT2 Y", mt2Pose.getPosition().y));
+                    telemetryPackets.add(new TelemetryPacket("MT2 Heading(deg)", mt2Pose.getOrientation().getYaw()));
+                }
+            }
+
+            // Transformed robot pose from LL
+            if (visionX != null) {
+                telemetryPackets.add(new TelemetryPacket("Vision->Robot X", visionX));
+                telemetryPackets.add(new TelemetryPacket("Vision->Robot Y", visionY));
+                telemetryPackets.add(new TelemetryPacket("Vision->Robot Heading(rad)", visionHeading));
+            }
+
+            // Drift estimates
+            telemetryPackets.add(new TelemetryPacket("Drift X", xDriftFilter.getDrift()));
+            telemetryPackets.add(new TelemetryPacket("Drift Y", yDriftFilter.getDrift()));
+            telemetryPackets.add(new TelemetryPacket("Drift Heading(rad)", headingDriftFilter.getDrift()));
+
+            // Corrected pose
+            if (correctedX != null) {
+                telemetryPackets.add(new TelemetryPacket("Corrected X", correctedX));
+                telemetryPackets.add(new TelemetryPacket("Corrected Y", correctedY));
+                telemetryPackets.add(new TelemetryPacket("Corrected Heading(rad)", correctedHeading));
             }
         }
     }
@@ -308,4 +353,10 @@ public class Vision extends WSubsystem {
             return drift;
         }
     }
+
+    @Override
+    public LinkedList<TelemetryPacket> getTelemetry() {
+        return telemetryPackets;
+    }
 }
+

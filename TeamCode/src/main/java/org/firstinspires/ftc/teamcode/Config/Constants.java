@@ -31,6 +31,9 @@ public class Constants {
     public static final double FarVelocity = 1850;
         public static final double closeVelocity = 1250;
     public static final double intakeVelocity = -500;
+
+    // Telemetry logging toggle for Launcher
+    public static boolean logTelemetry = false;
   }
 
   public static class Intake {
@@ -52,7 +55,7 @@ public class Constants {
 
     public static final double FEEDER_SERVO_OPEN = 0.5;
     public static final double FEEDER_SERVO_CLOSE = 0.63;
-//0.63
+
     public static final double INTAKE_MOTOR_FORWARD = -1.0;
     public static final double INTAKE_MOTOR_REVERSE = -1.0;
     public static final double INTAKE_MOTOR_HOLD = 0;
@@ -62,6 +65,9 @@ public class Constants {
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
     public static final double TRANSFER_MOTOR_HOLD = 0;
     public static final double TRANSFER_MOTOR_HP = 0.5;
+
+    // Telemetry logging toggle for Intake
+    public static boolean logTelemetry = false;
   }
 
   public static class Turret {
@@ -81,6 +87,9 @@ public class Constants {
       public static final double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
+
+      public static boolean logTelemetry = false;
+
 
   }
   public static class Robot {
@@ -114,5 +123,8 @@ public class Constants {
       public static final double LIMELIGHT_HEADING_STD = 0.000437; // radians
 
       public static final double LOOP_TIME = 0.02; // 20ms = 50Hz
+
+      // Telemetry logging toggle for Vision subsystem
+      public static boolean logTelemetry = false;
   }
 }

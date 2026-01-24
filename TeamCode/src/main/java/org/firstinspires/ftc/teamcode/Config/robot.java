@@ -1,8 +1,11 @@
  package org.firstinspires.ftc.teamcode.Config;
 
+ import org.firstinspires.ftc.robotcore.external.Telemetry;
  import org.firstinspires.ftc.teamcode.Config.Commands.IntakeOff;
  import org.firstinspires.ftc.teamcode.Config.Subsystems.robotHardware;
+ import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
+ import com.bylazar.telemetry.JoinedTelemetry;
  import com.qualcomm.robotcore.hardware.Gamepad;
  import com.qualcomm.robotcore.hardware.HardwareMap;
  import com.seattlesolvers.solverslib.command.Robot;
@@ -13,12 +16,16 @@
  import com.seattlesolvers.solverslib.gamepad.GamepadKeys;
  import com.seattlesolvers.solverslib.gamepad.TriggerReader;
 
+ import java.util.LinkedList;
+
  public class robot extends Robot {
   private HardwareMap hardwareMap;
   private robotHardware hardware;
   private GamepadEx driver, operator;
   private boolean isTeleOp = true;
   private Constants constantsload;
+  private LinkedList<TelemetryPacket> telemetryPackets;
+  private JoinedTelemetry telemetry;
 
   // Triggers and buttons
 
@@ -42,13 +49,21 @@
   public robot(HardwareMap hardwareMap) {
     this.hardwareMap = hardwareMap;
     constantsload = new Constants();
+    telemetryPackets = new LinkedList<TelemetryPacket>();
     initAuto();
   }
 
   public robot(HardwareMap hardwareMap, Gamepad gamepad1, Gamepad gamepad2) {
     this.hardwareMap = hardwareMap;
-    initTele(gamepad1, gamepad2);
+      telemetryPackets = new LinkedList<TelemetryPacket>();
+      initTele(gamepad1, gamepad2);
   }
+     public robot(HardwareMap hardwareMap, Gamepad gamepad1, Gamepad gamepad2, JoinedTelemetry telemetry) {
+         this.hardwareMap = hardwareMap;
+         telemetryPackets = new LinkedList<TelemetryPacket>();
+         this.telemetry = telemetry;
+         initTele(gamepad1, gamepad2);
+     }
 
   /*
    * Initialize teleop or autonomous, depending on which is used
@@ -111,6 +126,7 @@
 
   public void loop() {
     hardware.loop();
+    updateTelemetry();
   }
 
   public void write() {
@@ -124,5 +140,12 @@
    */
   public robotHardware getHardware() {
     return hardware;
+  }
+
+  private void updateTelemetry(){
+      for (TelemetryPacket t: telemetryPackets){
+          telemetry.addData(t.getName(),t.getValue());
+      }
+      telemetry.update();
   }
  }

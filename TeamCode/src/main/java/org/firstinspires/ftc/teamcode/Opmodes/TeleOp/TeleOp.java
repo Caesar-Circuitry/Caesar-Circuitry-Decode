@@ -15,9 +15,8 @@ public class TeleOp extends CommandOpMode {
     public void initialize() {
         super.reset();
         waitForStart();
-        robot = new robot(hardwareMap,gamepad1,gamepad2);
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
-
+        robot = new robot(hardwareMap,gamepad1,gamepad2,Telemetry);
         schedule(
                 new RunCommand(this.robot::read),
                 new RunCommand(this.robot::loop),
@@ -27,7 +26,5 @@ public class TeleOp extends CommandOpMode {
     @Override
     public void run(){
         super.run();
-        telemetry.addData("heading",Math.toDegrees(this.robot.getHardware().getFollower().getHeading()));
-        telemetry.update();
     }
 }
