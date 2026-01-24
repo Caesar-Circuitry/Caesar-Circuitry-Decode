@@ -105,6 +105,8 @@ public class Constants {
       }
       public static motif CurrentMOTIF = motif.GPP; //defaults to green purple purple
       public static Alliance alliance = Alliance.BLUE; //defaults to blue
+      public static final Pose BlueGoal = new Pose(6,144-6,0);
+      public static Pose Goal = BlueGoal;
   }
   public static class Vision {
       public static final String cameraName = "limelight";
@@ -129,7 +131,7 @@ public class Constants {
       public static boolean logTelemetry = false;
   }
   public static class Drivetrain {
-      public static final Pose startPose = new Pose(0, 0, 0);
+      public static final Pose Pose = new Pose(0, 0, 0);
 
       // Telemetry logging toggle for Drivetrain
       public static boolean logTelemetry = false;

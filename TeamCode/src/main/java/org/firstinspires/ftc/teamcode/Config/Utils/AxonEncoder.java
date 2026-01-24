@@ -103,18 +103,14 @@ public class AxonEncoder {
 
     /**
      * Wrap angle to range [-180, 180]
+     * Uses while loops for consistency with TurretMath.wrap180()
      * @param angle Angle in degrees
      * @return Wrapped angle in degrees
      */
     private static double wrap180(double angle) {
-        double wrapped = angle % 360.0;
-        if (wrapped <= -180.0) {
-            wrapped += 360.0;
-        }
-        if (wrapped > 180.0) {
-            wrapped -= 360.0;
-        }
-        return wrapped;
+        while (angle > 180.0) angle -= 360.0;
+        while (angle <= -180.0) angle += 360.0;
+        return angle;
     }
 
     /**

@@ -6,6 +6,7 @@
  import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
  import com.bylazar.telemetry.JoinedTelemetry;
+ import com.pedropathing.geometry.Pose;
  import com.qualcomm.robotcore.hardware.Gamepad;
  import com.qualcomm.robotcore.hardware.HardwareMap;
  import com.seattlesolvers.solverslib.command.Robot;
@@ -52,6 +53,22 @@
     telemetryPackets = new LinkedList<TelemetryPacket>();
     initAuto();
   }
+  public robot(HardwareMap hardwareMap, JoinedTelemetry telemetry) {
+     this.hardwareMap = hardwareMap;
+     constantsload = new Constants();
+     telemetryPackets = new LinkedList<TelemetryPacket>();
+     this.telemetry = telemetry;
+     initAuto();
+     }
+
+ public robot(HardwareMap hardwareMap, JoinedTelemetry telemetry, Constants.Robot.Alliance alliance) {
+     this.hardwareMap = hardwareMap;
+     constantsload = new Constants();
+     telemetryPackets = new LinkedList<TelemetryPacket>();
+     this.telemetry = telemetry;
+     Constants.Robot.alliance = alliance;
+     initAuto();
+ }
 
   public robot(HardwareMap hardwareMap, Gamepad gamepad1, Gamepad gamepad2) {
     this.hardwareMap = hardwareMap;
@@ -148,4 +165,10 @@
       }
       telemetry.update();
   }
+     public void setGoalTarget() {
+         if (Constants.Robot.alliance == Constants.Robot.Alliance.BLUE && Constants.Robot.Goal.getX() != 6)
+             Constants.Robot.Goal = Constants.Robot.BlueGoal;
+         else if (Constants.Robot.alliance == Constants.Robot.Alliance.RED && Constants.Robot.Goal.getX() != (144 - 6))
+             Constants.Robot.Goal = Constants.Robot.BlueGoal.mirror();
+     }
  }

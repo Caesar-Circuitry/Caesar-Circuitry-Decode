@@ -1,9 +1,11 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
+import static com.pedropathing.math.MathFunctions.normalizeAngle;
 import static org.firstinspires.ftc.teamcode.Config.Constants.Turret.*;
 import static org.firstinspires.ftc.teamcode.Config.Utils.TurretMath.*;
 
 import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
@@ -49,6 +51,8 @@ public class Turret extends WSubsystem {
       this.follower = follower;
       angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
       telemetryPackets = new LinkedList<TelemetryPacket>();
+      // Update encoder first to ensure initialization happens before reading
+      turretEncoder.update();
       targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
   }
 
@@ -64,6 +68,8 @@ public class Turret extends WSubsystem {
   @Override
   public void loop() {
     unwrappedServoAngle = turretEncoder.getUnwrappedEncoderAngle();
+    // The unwrappedServoAngle already includes the 180° offset from AxonEncoder
+    // Just divide by gear ratio to get turret angle
     currentTurretAngle = unwrappedServoAngle / gearRatio;
 
     // Determine desired turret angle based on mode
@@ -75,10 +81,13 @@ public class Turret extends WSubsystem {
     safeTurretAngle = getSafeTurretAngle(desiredTurretAngle, wrap180(currentTurretAngle));
     targetServoAngle = getClosestServoTarget(unwrappedServoAngle, safeTurretAngle * gearRatio);
 
-    // Calculate and apply PIDF control
+    // Validate that the path is safe before applying power
+    boolean pathSafe = isPathSafe(unwrappedServoAngle, targetServoAngle, gearRatio);
+
+    // Calculate and apply PIDF control only if path is safe
     servoError = targetServoAngle - unwrappedServoAngle;
     angleController.setSetPoint(targetServoAngle);
-    servoPower = clamp(angleController.calculate(unwrappedServoAngle), -1.0, 1.0);
+    servoPower = pathSafe ? clamp(angleController.calculate(unwrappedServoAngle), -1.0, 1.0) : 0.0;
 
     // Log telemetry if enabled
     if (logTelemetry) {
@@ -101,6 +110,7 @@ public class Turret extends WSubsystem {
         telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
 
         // Control output
+        telemetryPackets.addLast(new TelemetryPacket("Path Safe", pathSafe));
         telemetryPackets.addLast(new TelemetryPacket("Servo Error", servoError));
         telemetryPackets.addLast(new TelemetryPacket("Servo Power", servoPower));
 
@@ -129,6 +139,10 @@ public class Turret extends WSubsystem {
     // Calculate and store the robot-relative equivalent for use in manual mode
     this.robotRelativeTargetAngle = wrap180(angle - heading);
     this.trackPinpoint = false; // Switch to manual mode when target is set
+  }
+  public void faceTarget(Pose targetPose, Pose robotPose){
+      double angleToTargetFromCenter = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());
+      setTargetAngle(Math.toDegrees(angleToTargetFromCenter));
   }
 
   /**

@@ -27,7 +27,7 @@ public class Drivetrain extends WSubsystem {
     }
 
     public Drivetrain(HardwareMap hardwareMap) {
-        this(hardwareMap, Constants.Drivetrain.startPose);
+        this(hardwareMap, Constants.Drivetrain.Pose);
     }
 
     @Override
