@@ -177,4 +177,38 @@ public class TurretMath {
 
         return true;
     }
+
+    /**
+     * Find the closest servo angle target from candidates around the safe angle
+     * Selects the wrap that requires the shortest movement from the current position
+     *
+     * @param currentServoAngle Current unwrapped servo angle
+     * @param targetServoAngleSafe Safe target servo angle (wrapped to one revolution)
+     * @return The unwrapped servo angle target that's closest to current position
+     */
+    public static double getClosestServoTarget(double currentServoAngle, double targetServoAngleSafe) {
+        // Find which 360° wrap we're currently in
+        int currentWrapCount = (int) Math.round(currentServoAngle / 360.0);
+
+        // Generate 3 candidates: one wrap behind, current wrap, one wrap ahead
+        double[] candidates = {
+            targetServoAngleSafe + ((currentWrapCount - 1) * 360.0),
+            targetServoAngleSafe + (currentWrapCount * 360.0),
+            targetServoAngleSafe + ((currentWrapCount + 1) * 360.0)
+        };
+
+        // Find the candidate with minimum distance
+        double targetServoAngle = candidates[1]; // default to middle
+        double minDistance = Double.MAX_VALUE;
+
+        for (double candidate : candidates) {
+            double distance = Math.abs(candidate - currentServoAngle);
+            if (distance < minDistance) {
+                minDistance = distance;
+                targetServoAngle = candidate;
+            }
+        }
+
+        return targetServoAngle;
+    }
 }

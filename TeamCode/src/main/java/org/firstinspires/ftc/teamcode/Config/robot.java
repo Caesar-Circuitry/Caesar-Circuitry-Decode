@@ -18,6 +18,7 @@
   private robotHardware hardware;
   private GamepadEx driver, operator;
   private boolean isTeleOp = true;
+  private Constants constantsload;
 
   // Triggers and buttons
 
@@ -40,6 +41,7 @@
    */
   public robot(HardwareMap hardwareMap) {
     this.hardwareMap = hardwareMap;
+    constantsload = new Constants();
     initAuto();
   }
 
