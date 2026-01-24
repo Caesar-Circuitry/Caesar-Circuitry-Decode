@@ -13,8 +13,8 @@ public class robotHardware extends WSubsystem {
   private Follower m_follower;
   private Launcher Launcher;
   private Intake Intake;
-  private Turret Turret;
-  private Vision vision;
+//  private Turret Turret;
+//  private Vision vision;
   private HardwareMap hardwareMap;
   List<LynxModule> hubs;
 
@@ -26,8 +26,8 @@ public class robotHardware extends WSubsystem {
     this.m_follower.setStartingPose(new Pose(0,0,0));
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
-    this.Turret = new Turret(hardwareMap,m_follower);
-    this.vision = new Vision(hardwareMap,m_follower,Turret);
+//    this.Turret = new Turret(hardwareMap,m_follower);
+//    this.vision = new Vision(hardwareMap,m_follower,Turret);
 
   }
 
@@ -35,25 +35,25 @@ public class robotHardware extends WSubsystem {
   public void read() {
     Launcher.read();
     Intake.read();
-    Turret.read();
-    vision.read();
+//    Turret.read();
+//    vision.read();
   }
 
   @Override
   public void loop() {
     Launcher.loop();
     Intake.loop();
-    Turret.loop();
     m_follower.update();
-    vision.loop();
+//    Turret.loop();
+//    vision.loop();
   }
 
   @Override
   public void write() {
     Launcher.write();
     Intake.write();
-    Turret.write();
-    vision.write();
+//    Turret.write();
+//    vision.write();
     hubs.forEach(LynxModule::clearBulkCache);
 
   }
@@ -67,10 +67,10 @@ public class robotHardware extends WSubsystem {
   public Intake getIntake(){
       return Intake;
   }
-  public Turret getTurret(){
-      return Turret;
-  }
-  public Vision getVision(){
-      return vision;
-  }
+//  public Turret getTurret(){
+//      return Turret;
+//  }
+//  public Vision getVision(){
+//      return vision;
+//  }
 }

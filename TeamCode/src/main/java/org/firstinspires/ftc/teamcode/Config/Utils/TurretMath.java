@@ -75,4 +75,106 @@ public class TurretMath {
     public static double getCurrentPosition(AnalogInput analogInput) {
         return ((analogInput.getVoltage() / 3.3) * 360) - 180;
     }
+
+    /**
+     * Determines the safe turret angle to target, preventing wire damage.
+     * If the desired angle is outside the valid range (-135 to +135), this method
+     * intelligently chooses which limit to snap to based on the current position,
+     * ensuring the turret never tries to wrap around through the forbidden zone.
+     *
+     * @param desiredAngle The desired turret angle (wrapped to -180 to +180)
+     * @param currentAngle The current turret angle (wrapped to -180 to +180)
+     * @return The safe angle to target within the valid range
+     */
+    public static double getSafeTurretAngle(double desiredAngle, double currentAngle) {
+        final double MIN_ANGLE = -135.0;
+        final double MAX_ANGLE = 135.0;
+
+        // If desired angle is within valid range, use it directly
+        if (desiredAngle >= MIN_ANGLE && desiredAngle <= MAX_ANGLE) {
+            return desiredAngle;
+        }
+
+        // Desired angle is outside the valid range
+
+        // If desired angle is beyond +135 (in the range +135 to +180)
+        if (desiredAngle > MAX_ANGLE) {
+            // Check if we can reach +135 from current position without crossing forbidden zone
+            // If current is in valid range, we can always reach +135
+            // The forbidden zone is from +135 to -135 going through +180/-180
+            return MAX_ANGLE;
+        }
+
+        // If desired angle is beyond -135 (in the range -180 to -135)
+        if (desiredAngle < MIN_ANGLE) {
+            // Check if we can reach -135 from current position without crossing forbidden zone
+            // If current is in valid range, we can always reach -135
+            // The forbidden zone is from -135 to +135 going through -180/+180
+            return MIN_ANGLE;
+        }
+
+        // Fallback: shouldn't reach here due to wrap180, but just in case
+        return clamp(desiredAngle, MIN_ANGLE, MAX_ANGLE);
+    }
+
+    /**
+     * Check if the path from current to target servo angle is safe.
+     * A path is safe if:
+     * 1. The target turret angle (wrapped) is within -135° to +135° WITH SAFETY MARGIN
+     * 2. The path doesn't pass through the forbidden zone at ANY point along the journey
+     * 3. We densely sample the entire path, not just wrap boundaries
+     *
+     * Note: The servo angles passed in already have the 180° offset baked in, so we just
+     * divide by gear ratio without any offset adjustment.
+     *
+     * @param currentServo Current unwrapped servo angle (with 180° offset already applied)
+     * @param targetServo Target unwrapped servo angle (with 180° offset already applied)
+     * @param gearRatio The gear ratio between servo and turret
+     * @return true if the path is safe and target is valid
+     */
+    public static boolean isPathSafe(double currentServo, double targetServo, double gearRatio) {
+        final double MIN_TURRET = -135.0;
+        final double MAX_TURRET = 135.0;
+        final double SAFETY_MARGIN = 5.0; // Degrees of safety margin to prevent overshoot
+
+        // Convert target to turret angle (offset is already in servo angle, just divide)
+        double targetTurret = targetServo / gearRatio;
+        double wrappedTargetTurret = wrap180(targetTurret);
+
+        // First check: target must be within valid range WITH SAFETY MARGIN to prevent overshoot
+        if (wrappedTargetTurret < (MIN_TURRET + SAFETY_MARGIN) ||
+            wrappedTargetTurret > (MAX_TURRET - SAFETY_MARGIN)) {
+            return false;
+        }
+
+        // Check start position (also with safety margin)
+        double currentTurret = currentServo / gearRatio;
+        double wrappedCurrentTurret = wrap180(currentTurret);
+        if (wrappedCurrentTurret < (MIN_TURRET + SAFETY_MARGIN) ||
+            wrappedCurrentTurret > (MAX_TURRET - SAFETY_MARGIN)) {
+            return false;
+        }
+
+        // Sample the ENTIRE path densely to ensure we never enter forbidden zone
+        // We need to check every point along the unwrapped servo path
+        double servoDistance = Math.abs(targetServo - currentServo);
+
+        // Sample at least every 5 degrees of servo motion (2.5° of turret motion with 2:1 ratio)
+        int numSamples = Math.max(100, (int)(servoDistance / 5.0));
+
+        for (int i = 0; i <= numSamples; i++) {
+            double t = i / (double) numSamples;
+            double sampleServo = currentServo + t * (targetServo - currentServo);
+            double sampleTurret = sampleServo / gearRatio;
+            double wrappedSampleTurret = wrap180(sampleTurret);
+
+            // If any point along the path is in the forbidden zone (with margin), reject this path
+            if (wrappedSampleTurret < (MIN_TURRET + SAFETY_MARGIN) ||
+                wrappedSampleTurret > (MAX_TURRET - SAFETY_MARGIN)) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }

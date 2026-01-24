@@ -27,6 +27,8 @@
      Button Square;
      Button RightBumper; //Ground Intake
      Button LeftBumper; // HP Intake
+     Button dpadDown;
+     Button dpadUp;
      TriggerReader RightTrigger; // Launch Far
      TriggerReader LeftTrigger; // Launch Close
      Trigger Right;
@@ -77,6 +79,8 @@
     LeftTrigger = new TriggerReader(driver, GamepadKeys.Trigger.LEFT_TRIGGER);
     Right = new Trigger(()->RightTrigger.isDown());
     Left = new Trigger(()->LeftTrigger.isDown());
+    dpadDown = new GamepadButton(driver, GamepadKeys.Button.DPAD_DOWN);
+    dpadUp = new GamepadButton(driver, GamepadKeys.Button.DPAD_UP);
 
   }
 
@@ -86,9 +90,12 @@
       LeftBumper.whenReleased(hardware.getIntake().Hold());
       RightBumper.whileHeld(hardware.getIntake().GroundIntake());
       LeftBumper.whileHeld(hardware.getIntake().HP_Intaking());
-      Left.whenActive(hardware.getLauncher().LaunchClose());
-      Right.whenActive(hardware.getIntake().Launch());
+      Right.whenInactive(hardware.getLauncher().stopPower());
       Left.whenInactive(hardware.getLauncher().stopPower());
+      Left.whenActive(hardware.getLauncher().LaunchClose());
+      Right.whenActive(hardware.getLauncher().LaunchFar());
+      dpadUp.whenHeld(hardware.getIntake().Launch());
+      dpadDown.whenHeld(hardware.getIntake().Hold());
   }
 
   public void read() {
