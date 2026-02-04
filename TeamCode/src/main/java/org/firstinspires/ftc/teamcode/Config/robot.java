@@ -130,6 +130,7 @@
       Right.whenActive(hardware.getLauncher().LaunchFar());
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
+      Cross.whenHeld(hardware.getTurret().TargetAngle(Constants.Turret.GoalAngleBlue));
   }
 
   public void read() {
@@ -137,6 +138,7 @@
       driver.readButtons();
       RightTrigger.readValue();
       LeftTrigger.readValue();
+      hardware.getFollower().setTeleOpDrive(-driver.gamepad.left_stick_y, -driver.gamepad.left_stick_x, -driver.gamepad.right_stick_x, true);
     }
     hardware.read();
   }
@@ -160,9 +162,13 @@
   }
 
   private void updateTelemetry(){
+      telemetryPackets.clear();
+      telemetryPackets.addAll(hardware.getTelemetry());
       for (TelemetryPacket t: telemetryPackets){
           telemetry.addData(t.getName(),t.getValue());
       }
+//      telemetry.addData("Launcher Actual Velocity", hardware.getLauncher().getFlywheelVelocity());
+//      telemetry.addData("Laucher Target Velocity", hardware.getLauncher().getFlywheelTargetVelocity());
       telemetry.update();
   }
      public void setGoalTarget() {

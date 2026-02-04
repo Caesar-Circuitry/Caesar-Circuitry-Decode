@@ -32,9 +32,9 @@ public class PedroConstants {
           .leftRearMotorName("backLeft")
           .leftFrontMotorName("frontLeft")
           .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-          .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+          .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
           .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-          .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
+          .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
           .xVelocity(73.3870599016487)
           .yVelocity(48.436596487450785);
 

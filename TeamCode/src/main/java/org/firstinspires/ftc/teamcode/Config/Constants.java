@@ -4,13 +4,13 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.configurables.annotations.Sorter;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
-@Configurable
+
 public class Constants {
   //    public static class insertSubsystemName {
   // put subsystem specific constants here
   // example: public static final int MOTOR_PORT = 0;
   //    }
-
+@Configurable
   public static class Launcher {
 
     public static final String FLYWHEEL_MOTOR_LEAD = "Flywheel1";
@@ -19,12 +19,13 @@ public class Constants {
     public static final boolean FLYWHEEL_MOTOR_LEAD_INVERTED = false;
     public static final boolean FLYWHEEL_MOTOR_FOLLOW_INVERTED = true;
 
-    public static final double kP = 0.02;
-    public static final double kI = 0.5;
-    public static final double kD = 0.0;
-    public static final double kS = 0.13;
-    public static final double NOMINAL_BATTERY_VOLTAGE = 12;
-    public static final double VOLTAGE_UPDATE_INTERVAL_SECONDS = 5;
+    public static double kP = 0.02;
+    public static double kI = 0.015;
+    public static double kD = 0.0;
+    public static double kS = 0.13;
+    public static double Kv = 0.0004065;
+    public static double NOMINAL_BATTERY_VOLTAGE = 12;
+    public static double VOLTAGE_UPDATE_INTERVAL_SECONDS = 5;
 
     // Deadband to prevent oscillation when stopping (ticks per second)
     public static final double VELOCITY_DEADBAND = 50.0;
@@ -70,7 +71,7 @@ public class Constants {
     // Telemetry logging toggle for Intake
     public static boolean logTelemetry = false;
   }
-
+@Configurable
   public static class Turret {
       public static final String servoName = "servo1";
       public static final String servoName2 = "servo2";
@@ -79,17 +80,17 @@ public class Constants {
       public static final double gearRatio =
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
 
-      public static final double kP = 0.008;
-      public static final double kI = 0;
-      public static final double kD = 0.000;
-      public static final double kF_left = 0.07; // Feedforward when turning left (positive error)
-      public static final double kF_right = -0.06; // Feedforward when turning right (negative error)
+      public static  double kP = 0.008;
+      public static  double kI = 0;
+      public static  double kD = 0.000;
+      public static double kF_left = 0.07; // Feedforward when turning left (positive error)
+      public static  double kF_right = -0.06; // Feedforward when turning right (negative error)
 
-      public static final double GoalAngleBlue = -18; // degrees
+      public static  double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
 
-      public static boolean logTelemetry = false;
+      public static boolean logTelemetry = true;
 
 
   }

@@ -3,7 +3,6 @@ package org.firstinspires.ftc.teamcode.Config.Subsystems;
 import java.util.List;
 import java.util.LinkedList;
 
-import org.firstinspires.ftc.teamcode.Config.Commands.IntakeOff;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
@@ -15,6 +14,7 @@ import com.qualcomm.robotcore.hardware.VoltageSensor;
 import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.controller.PIDFController;
+import com.seattlesolvers.solverslib.controller.wpilibcontroller.SimpleMotorFeedforward;
 import com.seattlesolvers.solverslib.util.MathUtils;
 
 public class Launcher extends WSubsystem {
@@ -23,6 +23,7 @@ public class Launcher extends WSubsystem {
   private DcMotorEx flywheelFollow;
 
   private PIDFController flywheelController;
+  private SimpleMotorFeedforward flywheelFeedforward;
 
   private double flywheelVelocity = 0.0;
   private double flywheelTargetVelocity = 0.0; // Ticks per second
@@ -70,6 +71,8 @@ public class Launcher extends WSubsystem {
         0
     );
 
+    flywheelFeedforward = new SimpleMotorFeedforward(Constants.Launcher.kS,Constants.Launcher.Kv,0);
+
     // Setup voltage compensation
     voltageSensors = hardwareMap.getAll(VoltageSensor.class);
     voltageTimer.reset();
@@ -89,6 +92,8 @@ public class Launcher extends WSubsystem {
 
   @Override
   public void loop() {
+      flywheelController.setPIDF(Constants.Launcher.kP,Constants.Launcher.kI,Constants.Launcher.kD,0);
+
     // If target is 0 and actual velocity is within deadband, stop motors to prevent oscillation
     if (flywheelTargetVelocity == 0 && Math.abs(flywheelVelocity) <= Constants.Launcher.VELOCITY_DEADBAND) {
       compensatedPower = 0.0;
@@ -102,7 +107,7 @@ public class Launcher extends WSubsystem {
 
     // Calculate base power using PID controller + static feedforward
     double basePower = MathUtils.clamp(
-        flywheelController.calculate(flywheelVelocity, flywheelTargetVelocity) + Constants.Launcher.kS,
+        flywheelController.calculate(flywheelVelocity, flywheelTargetVelocity) + flywheelFeedforward.calculate(flywheelTargetVelocity),
         -1,
         1
     );
@@ -189,7 +194,7 @@ public class Launcher extends WSubsystem {
   public InstantCommand stop(){
       return new InstantCommand(()->setFlywheelTargetVelocity(0));
   }
-  public InstantCommand LaunchRannge(double range){
+  public InstantCommand LaunchRange(double range){
     return new InstantCommand(()->setFlywheelTargetVelocity(FlywheelKinematics.calculateFlywheelSpeed(range)));
   }
   public InstantCommand stopPower(){

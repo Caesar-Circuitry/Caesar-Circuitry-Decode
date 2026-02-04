@@ -1,6 +1,5 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
-import static com.pedropathing.math.MathFunctions.normalizeAngle;
 import static org.firstinspires.ftc.teamcode.Config.Constants.Turret.*;
 import static org.firstinspires.ftc.teamcode.Config.Utils.TurretMath.*;
 
@@ -27,7 +26,7 @@ public class Turret extends WSubsystem {
   // Configuration
   private double targetAngle = 0;
   private double robotRelativeTargetAngle = 0;
-  private boolean trackPinpoint = false;
+  private boolean trackPinpoint = true;
 
   // State
   private double heading = 0;
@@ -138,7 +137,7 @@ public class Turret extends WSubsystem {
     this.targetAngle = angle;
     // Calculate and store the robot-relative equivalent for use in manual mode
     this.robotRelativeTargetAngle = wrap180(angle - heading);
-    this.trackPinpoint = false; // Switch to manual mode when target is set
+    this.trackPinpoint = true; // Switch to manual mode when target is set
   }
   public void faceTarget(Pose targetPose, Pose robotPose){
       double angleToTargetFromCenter = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());

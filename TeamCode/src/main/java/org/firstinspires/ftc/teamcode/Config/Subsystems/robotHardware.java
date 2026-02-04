@@ -76,7 +76,12 @@ public class robotHardware extends WSubsystem {
     public Follower getFollower() {
     return drivetrain.getFollower();
   }
-  public Launcher getLauncher(){
+
+    public Drivetrain getDrivetrain() {
+        return drivetrain;
+    }
+
+    public Launcher getLauncher(){
       return Launcher;
   }
   public Intake getIntake(){
