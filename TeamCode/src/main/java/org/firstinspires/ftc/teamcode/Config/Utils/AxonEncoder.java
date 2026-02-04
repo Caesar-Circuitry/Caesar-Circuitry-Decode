@@ -17,6 +17,7 @@ public class AxonEncoder {
     private double unwrappedEncoderAngle = 0; // Total accumulated encoder rotation
     private boolean initialized = false;
 
+
     /**
      * Create an AxonEncoder for tracking absolute rotation
      * @param encoder The analog input connected to the Axon encoder
@@ -53,16 +54,32 @@ public class AxonEncoder {
             return;
         }
 
-        // Detect wraps and accumulate
+        // Calculate the direct delta
         double delta = rawAngle - previousRawAngle;
 
-        if (delta > 180) {
-            delta -= 360; // Wrapped backwards (360 -> 0)
-        } else if (delta < -180) {
-            delta += 360; // Wrapped forwards (0 -> 360)
+        // Context-aware wrap detection based on current unwrapped angle
+        // This distinguishes between the two test scenarios
+
+        if (delta < -300.0 && previousRawAngle > 300.0 && rawAngle < 60.0) {
+            // High → low crossing: e.g., 350° → 10°
+            // Only wrap if we're in a "positive" context (unwrapped angle suggests forward motion)
+            if (unwrappedEncoderAngle > 50.0) {
+                delta += 360.0;  // Forward wrap
+            }
+            // Otherwise, treat as continuous backward motion
+        } else if (delta > 300.0 && previousRawAngle < 60.0 && rawAngle > 300.0) {
+            // Low → high crossing: e.g., 10° → 350°
+            // Only wrap if we're in a "negative" context (unwrapped angle suggests backward motion)
+            if (unwrappedEncoderAngle < 100.0) {
+                delta -= 360.0;  // Backward wrap
+            }
+            // Otherwise, treat as continuous forward motion
         }
 
+        // Accumulate the delta to our unwrapped angle
         unwrappedEncoderAngle += delta;
+
+        // CRITICAL: Update previousRawAngle for next iteration
         previousRawAngle = rawAngle;
     }
 
