@@ -80,8 +80,9 @@ public class Vision extends WSubsystem {
             Pose3D botPose = results.getBotpose();
 
             if (botPose != null) {
-                double limelightX = botPose.getPosition().x;
-                double limelightY = botPose.getPosition().y;
+                // Limelight returns position in meters, convert to inches
+                double limelightX = botPose.getPosition().x * 39.3701;
+                double limelightY = botPose.getPosition().y * 39.3701;
                 double limelightHeading = Math.toRadians(botPose.getOrientation().getYaw());
 
                 double[] robotPose = transformLimelightToRobot(limelightX, limelightY, limelightHeading);
@@ -270,9 +271,10 @@ public class Vision extends WSubsystem {
             // MT2 automatically uses orientation from Pinpoint
             Pose3D botPose = results.getBotpose_MT2();
             if (botPose != null) {
+                // Limelight returns position in meters, convert to inches
                 return new double[]{
-                    botPose.getPosition().x,
-                    botPose.getPosition().y,
+                    botPose.getPosition().x * 39.3701,
+                    botPose.getPosition().y * 39.3701,
                     Math.toRadians(botPose.getOrientation().getYaw())
                 };
             }
@@ -290,9 +292,10 @@ public class Vision extends WSubsystem {
             // Use MT1 which doesn't require odometry input
             Pose3D botPose = results.getBotpose();
             if (botPose != null) {
+                // Limelight returns position in meters, convert to inches
                 return new double[]{
-                    botPose.getPosition().x,
-                    botPose.getPosition().y,
+                    botPose.getPosition().x * 39.3701,
+                    botPose.getPosition().y * 39.3701,
                     Math.toRadians(botPose.getOrientation().getYaw())
                 };
             }

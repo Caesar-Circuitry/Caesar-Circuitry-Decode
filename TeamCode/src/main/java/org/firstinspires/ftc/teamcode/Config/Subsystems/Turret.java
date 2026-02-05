@@ -79,7 +79,7 @@ public class Turret extends WSubsystem {
 
     // Apply safety limits and find target
     safeTurretAngle = getSafeTurretAngle(desiredTurretAngle, wrap180(currentTurretAngle));
-    targetServoAngle = getClosestServoTarget(unwrappedServoAngle, safeTurretAngle * gearRatio);
+    targetServoAngle = getClosestServoTarget(unwrappedServoAngle, safeTurretAngle * gearRatio, gearRatio);
 
     // Validate that the path is safe before applying power
     boolean pathSafe = isPathSafe(unwrappedServoAngle, targetServoAngle, gearRatio);

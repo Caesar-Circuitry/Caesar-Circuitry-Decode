@@ -203,6 +203,12 @@ public class Launcher extends WSubsystem {
   public void setStopPower(boolean stopPower){
       this.stopPower = stopPower;
   }
+  public boolean isAtDesiredSpeed(){
+      if (flywheelTargetVelocity == flywheelVelocity-Constants.Launcher.Detection_DeadBand ||flywheelTargetVelocity == flywheelVelocity+Constants.Launcher.Detection_DeadBand){
+          return true;
+      }
+      return false;
+  }
 
   @Override
   public LinkedList<TelemetryPacket> getTelemetry() {

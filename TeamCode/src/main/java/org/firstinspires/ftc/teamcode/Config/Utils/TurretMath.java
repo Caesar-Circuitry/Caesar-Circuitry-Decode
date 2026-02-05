@@ -181,14 +181,36 @@ public class TurretMath {
     /**
      * Find the closest servo angle target from candidates around the safe angle
      * Selects the wrap that requires the shortest movement from the current position
+     * WITHOUT passing through the forbidden zone (beyond ±135° turret angle)
      *
      * @param currentServoAngle Current unwrapped servo angle
      * @param targetServoAngleSafe Safe target servo angle (wrapped to one revolution)
      * @return The unwrapped servo angle target that's closest to current position
      */
     public static double getClosestServoTarget(double currentServoAngle, double targetServoAngleSafe) {
+        return getClosestServoTarget(currentServoAngle, targetServoAngleSafe, 2.0); // Default gear ratio
+    }
+
+    /**
+     * Find the closest servo angle target from candidates around the safe angle
+     * Selects the wrap that requires the shortest movement from the current position
+     * WITHOUT passing through the forbidden zone (beyond ±135° turret angle)
+     *
+     * @param currentServoAngle Current unwrapped servo angle
+     * @param targetServoAngleSafe Safe target servo angle (wrapped to one revolution)
+     * @param gearRatio The gear ratio between servo and turret
+     * @return The unwrapped servo angle target that's closest to current position
+     */
+    public static double getClosestServoTarget(double currentServoAngle, double targetServoAngleSafe, double gearRatio) {
+        final double MIN_TURRET = -135.0;
+        final double MAX_TURRET = 135.0;
+        final double DANGER_THRESHOLD = 120.0; // Start being cautious when near limits
+
         // Find which 360° wrap we're currently in
         int currentWrapCount = (int) Math.round(currentServoAngle / 360.0);
+
+        // Check current turret position
+        double currentTurret = wrap180(currentServoAngle / gearRatio);
 
         // Generate 3 candidates: one wrap behind, current wrap, one wrap ahead
         double[] candidates = {
@@ -197,16 +219,43 @@ public class TurretMath {
             targetServoAngleSafe + ((currentWrapCount + 1) * 360.0)
         };
 
-        // Find the candidate with minimum distance
-        double targetServoAngle = candidates[1]; // default to middle
+        // Find the candidate with minimum distance that doesn't pass through forbidden zone
+        double targetServoAngle = candidates[1]; // default to middle (current wrap)
         double minDistance = Double.MAX_VALUE;
 
         for (double candidate : candidates) {
             double distance = Math.abs(candidate - currentServoAngle);
-            if (distance < minDistance) {
+
+            // Check if this candidate would require passing through the forbidden zone
+            boolean wouldPassThroughForbiddenZone = false;
+
+            // If we're near the positive limit and trying to wrap forward (increase angle significantly)
+            if (currentTurret > DANGER_THRESHOLD && candidate > currentServoAngle + (90 * gearRatio)) {
+                wouldPassThroughForbiddenZone = true;
+            }
+            // If we're near the negative limit and trying to wrap backward (decrease angle significantly)
+            if (currentTurret < -DANGER_THRESHOLD && candidate < currentServoAngle - (90 * gearRatio)) {
+                wouldPassThroughForbiddenZone = true;
+            }
+
+            // Also check if the path itself would cross through forbidden zone
+            // by checking the midpoint
+            double midServo = (currentServoAngle + candidate) / 2.0;
+            double midTurret = wrap180(midServo / gearRatio);
+            if (midTurret < MIN_TURRET || midTurret > MAX_TURRET) {
+                wouldPassThroughForbiddenZone = true;
+            }
+
+            // Only consider this candidate if it doesn't pass through forbidden zone
+            if (!wouldPassThroughForbiddenZone && distance < minDistance) {
                 minDistance = distance;
                 targetServoAngle = candidate;
             }
+        }
+
+        // If all candidates were rejected (shouldn't happen), fall back to current wrap
+        if (minDistance == Double.MAX_VALUE) {
+            targetServoAngle = candidates[1];
         }
 
         return targetServoAngle;

@@ -29,6 +29,7 @@ public class Constants {
 
     // Deadband to prevent oscillation when stopping (ticks per second)
     public static final double VELOCITY_DEADBAND = 50.0;
+    public static double Detection_DeadBand =20;
 
     public static final double FarVelocity = 1850;
         public static final double closeVelocity = 1250;
@@ -80,7 +81,6 @@ public class Constants {
       public static final double gearRatio =
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
     public static double angleOffset = -180;
-
       public static  double kP = 0.008;
       public static  double kI = 0;
       public static  double kD = 0.000;
