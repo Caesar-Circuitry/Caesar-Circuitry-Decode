@@ -130,7 +130,9 @@
       Right.whenActive(hardware.getLauncher().LaunchFar());
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
-      Cross.whenHeld(hardware.getTurret().TargetAngle(Constants.Turret.GoalAngleBlue));
+      Cross.whenReleased(()->hardware.getTurret().faceTarget(Constants.Robot.Goal, hardware.getDrivetrain().getFollower().getPose()));
+      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
+      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
   }
 
   public void read() {
@@ -162,6 +164,7 @@
   }
 
   private void updateTelemetry(){
+      telemetry.clearAll();
       telemetryPackets.clear();
       telemetryPackets.addAll(hardware.getTelemetry());
       for (TelemetryPacket t: telemetryPackets){
@@ -169,6 +172,7 @@
       }
 //      telemetry.addData("Launcher Actual Velocity", hardware.getLauncher().getFlywheelVelocity());
 //      telemetry.addData("Laucher Target Velocity", hardware.getLauncher().getFlywheelTargetVelocity());
+      telemetry.addData("pose",hardware.getDrivetrain().getFollower().getPose());
       telemetry.update();
   }
      public void setGoalTarget() {

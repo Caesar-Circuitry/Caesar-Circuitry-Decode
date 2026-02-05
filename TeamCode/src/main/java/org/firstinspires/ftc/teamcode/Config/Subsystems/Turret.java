@@ -9,6 +9,7 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
+import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.AxonEncoder;
 import org.firstinspires.ftc.teamcode.Config.Utils.AnglePIDF;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
@@ -26,7 +27,7 @@ public class Turret extends WSubsystem {
   // Configuration
   private double targetAngle = 0;
   private double robotRelativeTargetAngle = 0;
-  private boolean trackPinpoint = true;
+  private boolean trackPinpoint = false;
 
   // State
   private double heading = 0;
@@ -46,7 +47,7 @@ public class Turret extends WSubsystem {
   public Turret(HardwareMap hardwareMap, Follower follower) {
       servo = hardwareMap.get(CRServo.class, servoName);
       servo2 = hardwareMap.get(CRServo.class, servoName2);
-      turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, 180.0);
+      turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, angleOffset);
       this.follower = follower;
       angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
       telemetryPackets = new LinkedList<TelemetryPacket>();
@@ -137,7 +138,7 @@ public class Turret extends WSubsystem {
     this.targetAngle = angle;
     // Calculate and store the robot-relative equivalent for use in manual mode
     this.robotRelativeTargetAngle = wrap180(angle - heading);
-    this.trackPinpoint = true; // Switch to manual mode when target is set
+    this.trackPinpoint = false; // Switch to manual mode when target is set
   }
   public void faceTarget(Pose targetPose, Pose robotPose){
       double angleToTargetFromCenter = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());

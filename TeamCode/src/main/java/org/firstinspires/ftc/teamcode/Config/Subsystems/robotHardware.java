@@ -16,7 +16,7 @@ public class robotHardware extends WSubsystem {
   private Launcher Launcher;
   private Intake Intake;
   private Turret Turret;
-  private Vision vision;
+  //private Vision vision;
   private HardwareMap hardwareMap;
   List<LynxModule> hubs;
   private LinkedList<TelemetryPacket> telemetry;
@@ -29,7 +29,7 @@ public class robotHardware extends WSubsystem {
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
     this.Turret = new Turret(hardwareMap,drivetrain.getFollower());
-    this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
+    //this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
     this.telemetry = new LinkedList<TelemetryPacket>();
 
   }
@@ -40,7 +40,7 @@ public class robotHardware extends WSubsystem {
     Launcher.read();
     Intake.read();
     Turret.read();
-    vision.read();
+//    vision.read();
   }
 
   @Override
@@ -49,7 +49,7 @@ public class robotHardware extends WSubsystem {
     Launcher.loop();
     Intake.loop();
     Turret.loop();
-    vision.loop();
+//    vision.loop();
   }
 
   @Override
@@ -58,18 +58,19 @@ public class robotHardware extends WSubsystem {
     Launcher.write();
     Intake.write();
     Turret.write();
-    vision.write();
+//    vision.write();
     hubs.forEach(LynxModule::clearBulkCache);
 
   }
 
     @Override
     public LinkedList<TelemetryPacket> getTelemetry() {
+        telemetry.clear();
         telemetry.addAll(drivetrain.getTelemetry());
         telemetry.addAll(Launcher.getTelemetry());
         telemetry.addAll(Intake.getTelemetry());
         telemetry.addAll(Turret.getTelemetry());
-        telemetry.addAll(vision.getTelemetry());
+//        telemetry.addAll(vision.getTelemetry());
         return telemetry;
     }
 
@@ -90,7 +91,7 @@ public class robotHardware extends WSubsystem {
   public Turret getTurret(){
       return Turret;
   }
-  public Vision getVision(){
-      return vision;
-  }
+//  public Vision getVision(){
+//      return vision;
+//  }
 }

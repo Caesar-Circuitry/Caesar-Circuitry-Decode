@@ -77,7 +77,7 @@ public class Vision extends WSubsystem {
 
         // Update step - only when vision is available
         if (results != null && results.isValid()) {
-            Pose3D botPose = results.getBotpose_MT2();
+            Pose3D botPose = results.getBotpose();
 
             if (botPose != null) {
                 double limelightX = botPose.getPosition().x;
@@ -102,7 +102,7 @@ public class Vision extends WSubsystem {
                     correctedY = odometryY - yDriftFilter.getDrift();
                     correctedHeading = normalizeAngle(odometryHeading - headingDriftFilter.getDrift());
 
-                    follower.setPose(new Pose(correctedX, correctedY, correctedHeading));
+                    follower.setPose(new Pose(correctedX, correctedY, follower.getHeading()));
                 }
             }
         }

@@ -79,6 +79,7 @@ public class Constants {
 
       public static final double gearRatio =
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
+    public static double angleOffset = -180;
 
       public static  double kP = 0.008;
       public static  double kI = 0;
