@@ -28,7 +28,7 @@ public class robotHardware extends WSubsystem {
     this.drivetrain = new Drivetrain(hardwareMap);
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
-    this.Turret = new Turret(hardwareMap,drivetrain.getFollower());
+    this.Turret = new Turret(hardwareMap,drivetrain.getFollower(),getLauncher());
     //this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
     this.telemetry = new LinkedList<TelemetryPacket>();
 

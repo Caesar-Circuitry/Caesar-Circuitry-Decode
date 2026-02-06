@@ -84,8 +84,8 @@ public class Constants {
       public static  double kP = 0.008;
       public static  double kI = 0;
       public static  double kD = 0.000;
-      public static double kF_left = 0.07; // Feedforward when turning left (positive error)
-      public static  double kF_right = -0.06; // Feedforward when turning right (negative error)
+      public static double kF_left = 0.06; // Feedforward when turning left (positive error)
+      public static  double kF_right = -0.08; // Feedforward when turning right (negative error)
 
       public static  double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red

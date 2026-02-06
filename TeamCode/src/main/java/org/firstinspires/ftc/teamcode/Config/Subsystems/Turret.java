@@ -22,6 +22,7 @@ public class Turret extends WSubsystem {
   private AxonEncoder turretEncoder;
   private AnglePIDF angleController;
   private Follower follower;
+  private Launcher launcher; // For voltage compensation
 
   // Configuration
   private double targetAngle = 0;
@@ -35,11 +36,13 @@ public class Turret extends WSubsystem {
   private double targetServoAngle = 0;
   private double servoError = 0;
   private double servoPower = 0;
+  private double voltageCompensation = 1.0;
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
   private static final double ERROR_DEADBAND = 5.0;
   private static final double WAYPOINT_THRESHOLD = 20.0;
+  private static final double NOMINAL_VOLTAGE = 12.82; // Nominal battery voltage for compensation
 
   // Wrap-around state
   private boolean isWrapping = false;
@@ -58,11 +61,12 @@ public class Turret extends WSubsystem {
   private double wrappedCurrentTurret = 0;
 
 
-  public Turret(HardwareMap hardwareMap, Follower follower) {
+  public Turret(HardwareMap hardwareMap, Follower follower, Launcher launcher) {
     servo = hardwareMap.get(CRServo.class, servoName);
     servo2 = hardwareMap.get(CRServo.class, servoName2);
     turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, angleOffset);
     this.follower = follower;
+    this.launcher = launcher; // Store launcher reference for voltage reading
     angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
     angleController.enableUnwrappedMode();
     telemetryPackets = new LinkedList<>();
@@ -128,6 +132,20 @@ public class Turret extends WSubsystem {
     // Calculate error and power
     servoError = targetServoAngle - unwrappedServoAngle;
 
+    // Apply voltage compensation to feedforward values
+    voltageCompensation = 1.0;
+    if (launcher != null) {
+      double batteryVoltage = launcher.getBatteryVoltageValue();
+      if (batteryVoltage > 0.1) {
+        voltageCompensation = NOMINAL_VOLTAGE / batteryVoltage;
+      }
+    }
+
+    // Update controller with voltage-compensated kF values
+    double compensatedKfLeft = kF_left * voltageCompensation;
+    double compensatedKfRight = kF_right * voltageCompensation;
+    angleController.setCoefficients(kP, kI, kD, compensatedKfLeft, compensatedKfRight);
+
     // PID control
     angleController.setSetPoint(targetServoAngle);
     double basePower;
@@ -181,6 +199,8 @@ public class Turret extends WSubsystem {
       telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("In Forbidden Zone", inForbiddenZone));
+      telemetryPackets.addLast(new TelemetryPacket("Battery Voltage", launcher != null ? launcher.getBatteryVoltageValue() : NOMINAL_VOLTAGE));
+      telemetryPackets.addLast(new TelemetryPacket("Voltage Compensation", voltageCompensation));
       telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
     }
   }
