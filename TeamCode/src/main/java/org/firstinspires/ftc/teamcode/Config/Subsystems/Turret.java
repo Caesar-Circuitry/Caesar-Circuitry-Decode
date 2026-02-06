@@ -9,7 +9,6 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
-import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.AxonEncoder;
 import org.firstinspires.ftc.teamcode.Config.Utils.AnglePIDF;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
@@ -18,11 +17,11 @@ import java.util.LinkedList;
 
 
 public class Turret extends WSubsystem {
-    private CRServo servo;
-    private CRServo servo2;
-    private AxonEncoder turretEncoder;
-    private AnglePIDF angleController;
-    private Follower follower;
+  private CRServo servo;
+  private CRServo servo2;
+  private AxonEncoder turretEncoder;
+  private AnglePIDF angleController;
+  private Follower follower;
 
   // Configuration
   private double targetAngle = 0;
@@ -36,153 +35,322 @@ public class Turret extends WSubsystem {
   private double servoError = 0;
   private double servoPower = 0;
 
-  // Loop intermediate values (for telemetry/debugging)
+  // Constants
+  private static final double SAFE_LIMIT = 135.0;
+  private static final double ERROR_DEADBAND = 5.0;
+  private static final double WAYPOINT_THRESHOLD = 20.0;
+
+  // Wrap-around state
+  private boolean isWrapping = false;
+  private int wrapStep = 0; // 0=not wrapping, 1-4=waypoints
+  private boolean wrapGoingPositive = false; // true = going toward +135, false = going toward -135
+
+  // Waypoints: we always go through center
+  // Going positive (from neg to pos): -135 → -10 → +10 → +135
+  // Going negative (from pos to neg): +135 → +10 → -10 → -135
+
+  // Telemetry
   private LinkedList<TelemetryPacket> telemetryPackets;
   private double unwrappedServoAngle = 0;
   private double desiredTurretAngle = 0;
   private double safeTurretAngle = 0;
-
+  private double wrappedCurrentTurret = 0;
 
 
   public Turret(HardwareMap hardwareMap, Follower follower) {
-      servo = hardwareMap.get(CRServo.class, servoName);
-      servo2 = hardwareMap.get(CRServo.class, servoName2);
-      turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, angleOffset);
-      this.follower = follower;
-      angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
-      telemetryPackets = new LinkedList<TelemetryPacket>();
-      // Update encoder first to ensure initialization happens before reading
-      turretEncoder.update();
-      targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
+    servo = hardwareMap.get(CRServo.class, servoName);
+    servo2 = hardwareMap.get(CRServo.class, servoName2);
+    turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, angleOffset);
+    this.follower = follower;
+    angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
+    angleController.enableUnwrappedMode();
+    telemetryPackets = new LinkedList<>();
+    turretEncoder.update();
+    targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
   }
 
   @Override
   public void read() {
-    // Read robot heading from follower
     heading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
-
-    // Update encoder - handles wrap detection and accumulation internally
     turretEncoder.update();
   }
 
   @Override
   public void loop() {
+    // Get current position
     unwrappedServoAngle = turretEncoder.getUnwrappedEncoderAngle();
-    // The unwrappedServoAngle already includes the 180° offset from AxonEncoder
-    // Just divide by gear ratio to get turret angle
     currentTurretAngle = unwrappedServoAngle / gearRatio;
+    wrappedCurrentTurret = wrap180(currentTurretAngle);
 
-    // Determine desired turret angle based on mode
+    // Get desired turret angle
     desiredTurretAngle = trackPinpoint
       ? wrap180(targetAngle - heading)
       : robotRelativeTargetAngle;
 
-    // Apply safety limits and find target
-    safeTurretAngle = getSafeTurretAngle(desiredTurretAngle, wrap180(currentTurretAngle));
-    targetServoAngle = getClosestServoTarget(unwrappedServoAngle, safeTurretAngle * gearRatio, gearRatio);
+    // Determine safe turret angle
+    safeTurretAngle = calculateSafeTurretAngle(wrappedCurrentTurret, desiredTurretAngle);
 
-    // Validate that the path is safe before applying power
-    boolean pathSafe = isPathSafe(unwrappedServoAngle, targetServoAngle, gearRatio);
+    // Handle wrap state machine if wrapping
+    if (isWrapping) {
+      double waypoint = getCurrentWaypoint();
 
-    // Calculate and apply PIDF control only if path is safe
+      // Check if we reached the waypoint
+      if (Math.abs(wrappedCurrentTurret - waypoint) < WAYPOINT_THRESHOLD) {
+        wrapStep++;
+        if (wrapStep > 4) {
+          // Done wrapping
+          isWrapping = false;
+          wrapStep = 0;
+        }
+      }
+
+      // Override safe target with current waypoint while wrapping
+      if (isWrapping) {
+        safeTurretAngle = getCurrentWaypoint();
+      }
+    }
+
+    // Calculate target servo angle
+    targetServoAngle = calculateServoTarget(safeTurretAngle);
+
+    // Calculate error and power
     servoError = targetServoAngle - unwrappedServoAngle;
+
+    // PID control
     angleController.setSetPoint(targetServoAngle);
-    servoPower = pathSafe ? clamp(angleController.calculate(unwrappedServoAngle), -1.0, 1.0) : 0.0;
+    double basePower;
 
-    // Log telemetry if enabled
+    if (Math.abs(servoError) < ERROR_DEADBAND) {
+      basePower = 0.0;
+      angleController.reset();
+    } else {
+      basePower = angleController.calculate(unwrappedServoAngle);
+      if (Math.abs(servoError) < 30.0) {
+        basePower = clamp(basePower, -0.5, 0.5);
+      }
+    }
+
+    // SAFETY: If in forbidden zone (>140°), force movement toward center
+    boolean inForbiddenZone = Math.abs(wrappedCurrentTurret) > 140.0;
+    if (inForbiddenZone) {
+      if (wrappedCurrentTurret > 0) {
+        basePower = -0.5;
+      } else {
+        basePower = 0.5;
+      }
+    }
+
+    servoPower = clamp(basePower, -1.0, 1.0);
+
+    // Telemetry
     if (logTelemetry) {
-        telemetryPackets.clear(); // Clear previous packets
+      telemetryPackets.clear();
 
-        // Configuration
-        telemetryPackets.addLast(new TelemetryPacket("Target Angle (Field)", targetAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Target Angle (Robot)", robotRelativeTargetAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Pinpoint Tracking", trackPinpoint));
+      String status;
+      if (inForbiddenZone) {
+        status = "FORBIDDEN ZONE";
+      } else if (isWrapping) {
+        status = "WRAPPING Step " + wrapStep + " → " + getCurrentWaypoint() + "°";
+      } else if (Math.abs(servoError) < ERROR_DEADBAND) {
+        status = "AT TARGET";
+      } else {
+        status = "MOVING";
+      }
 
-        // Sensor readings
-        telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
-        telemetryPackets.addLast(new TelemetryPacket("Raw Encoder", turretEncoder.getRawAngle()));
-
-        // Loop calculations
-        telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Current Turret", currentTurretAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Desired Turret", desiredTurretAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Safe Turret", safeTurretAngle));
-        telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
-
-        // Control output
-        telemetryPackets.addLast(new TelemetryPacket("Path Safe", pathSafe));
-        telemetryPackets.addLast(new TelemetryPacket("Servo Error", servoError));
-        telemetryPackets.addLast(new TelemetryPacket("Servo Power", servoPower));
-
-        // PIDF state
-        telemetryPackets.addLast(new TelemetryPacket("PIDF Error", angleController.getLastError()));
-        telemetryPackets.addLast(new TelemetryPacket("PIDF Integral", angleController.getIntegral()));
+      telemetryPackets.addLast(new TelemetryPacket("=== STATUS ===", status));
+      telemetryPackets.addLast(new TelemetryPacket("Wrapped Turret", wrappedCurrentTurret));
+      telemetryPackets.addLast(new TelemetryPacket("Desired Turret", desiredTurretAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Safe Turret", safeTurretAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Servo Error", servoError));
+      telemetryPackets.addLast(new TelemetryPacket("Servo Power", servoPower));
+      telemetryPackets.addLast(new TelemetryPacket("Is Wrapping", isWrapping));
+      telemetryPackets.addLast(new TelemetryPacket("Wrap Step", wrapStep));
+      telemetryPackets.addLast(new TelemetryPacket("Wrap Direction", wrapGoingPositive ? "→ +135" : "→ -135"));
+      telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
+      telemetryPackets.addLast(new TelemetryPacket("In Forbidden Zone", inForbiddenZone));
+      telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
     }
   }
 
+  /**
+   * Calculate the safe turret angle, handling wrap-around logic
+   *
+   * RULES:
+   * 1. If target is in forbidden zone (>±135°), go to ±135° on the SAME SIDE AS TARGET
+   * 2. If target is reachable without crossing forbidden zone, go direct
+   * 3. If target requires crossing through ±180° (forbidden), start wrap sequence
+   */
+  private double calculateSafeTurretAngle(double current, double desired) {
+    // First, check if desired is in forbidden zone
+    boolean desiredInForbidden = Math.abs(desired) > SAFE_LIMIT;
+
+    if (desiredInForbidden) {
+      // Target is in forbidden zone - go to the limit on the SAME SIDE AS TARGET
+      // This way we get as close as possible to where we want to be
+      if (desired > 0) {
+        // Target is past +135°, go to +135°
+        // But we might need to wrap if we're on the negative side
+        if (current < -90.0) {
+          // We're far on negative side, need to wrap to reach +135
+          if (!isWrapping) {
+            isWrapping = true;
+            wrapStep = 1;
+            wrapGoingPositive = true;
+            return getCurrentWaypoint();
+          }
+        }
+        return SAFE_LIMIT;  // Go to +135
+      } else {
+        // Target is past -135°, go to -135°
+        // But we might need to wrap if we're on the positive side
+        if (current > 90.0) {
+          // We're far on positive side, need to wrap to reach -135
+          if (!isWrapping) {
+            isWrapping = true;
+            wrapStep = 1;
+            wrapGoingPositive = false;
+            return getCurrentWaypoint();
+          }
+        }
+        return -SAFE_LIMIT; // Go to -135
+      }
+    }
+
+    // Desired is within safe range (-135 to +135)
+    // Check if we can reach it directly without crossing forbidden zone
+
+    boolean currentPositive = current >= 0;
+    boolean desiredPositive = desired >= 0;
+
+    // If same side, always safe to go direct
+    if (currentPositive == desiredPositive) {
+      if (!isWrapping) {
+        return desired;
+      }
+    }
+
+    // Opposite sides - check if we need to wrap
+    // We need to wrap if BOTH are far from center (>90°)
+    // because the direct path would cross through ±180° (forbidden)
+    boolean needsWrap = Math.abs(current) > 90.0 && Math.abs(desired) > 90.0;
+
+    if (needsWrap && !isWrapping) {
+      // Start wrap sequence
+      isWrapping = true;
+      wrapStep = 1;
+      wrapGoingPositive = desired > 0; // Going toward the target side
+      return getCurrentWaypoint();
+    }
+
+    if (!isWrapping) {
+      // Safe to go direct (one of us is near center)
+      return desired;
+    }
+
+    // If we're wrapping, the waypoint is returned in loop()
+    return getCurrentWaypoint();
+  }
+
+  /**
+   * Get the current waypoint for wrap sequence
+   */
+  private double getCurrentWaypoint() {
+    if (!isWrapping || wrapStep < 1 || wrapStep > 4) {
+      return safeTurretAngle;
+    }
+
+    if (wrapGoingPositive) {
+      // Going from negative to positive: -135 → -10 → +10 → +135
+      switch (wrapStep) {
+        case 1: return -SAFE_LIMIT; // -135
+        case 2: return -10.0;
+        case 3: return 10.0;
+        case 4: return SAFE_LIMIT;  // +135
+        default: return 0;
+      }
+    } else {
+      // Going from positive to negative: +135 → +10 → -10 → -135
+      switch (wrapStep) {
+        case 1: return SAFE_LIMIT;  // +135
+        case 2: return 10.0;
+        case 3: return -10.0;
+        case 4: return -SAFE_LIMIT; // -135
+        default: return 0;
+      }
+    }
+  }
+
+  /**
+   * Calculate the servo target for a given turret angle
+   */
+  private double calculateServoTarget(double turretTarget) {
+    double targetTurretServo = turretTarget * gearRatio;
+
+    // Find which 720° wrap we're in
+    double servoPerTurretRotation = 360.0 * gearRatio;
+    int turretWrap = (int) Math.round(unwrappedServoAngle / servoPerTurretRotation);
+
+    // Calculate candidates
+    double candidate1 = targetTurretServo + (turretWrap * servoPerTurretRotation);
+    double candidate2 = targetTurretServo + ((turretWrap - 1) * servoPerTurretRotation);
+    double candidate3 = targetTurretServo + ((turretWrap + 1) * servoPerTurretRotation);
+
+    // Pick closest
+    double dist1 = Math.abs(candidate1 - unwrappedServoAngle);
+    double dist2 = Math.abs(candidate2 - unwrappedServoAngle);
+    double dist3 = Math.abs(candidate3 - unwrappedServoAngle);
+
+    if (dist1 <= dist2 && dist1 <= dist3) {
+      return candidate1;
+    } else if (dist2 <= dist3) {
+      return candidate2;
+    } else {
+      return candidate3;
+    }
+  }
 
   @Override
   public void write() {
-    // Set power to both servos
     servo.setPower(servoPower);
     servo2.setPower(servoPower);
   }
 
-  // Public methods for controlling and querying turret state
-
-  /**
-   * Set the target angle (field-relative) for the turret to point to
-   * @param angle Target angle in degrees (field-relative)
-   */
   public void setTargetAngle(double angle) {
     this.targetAngle = angle;
-    // Calculate and store the robot-relative equivalent for use in manual mode
     this.robotRelativeTargetAngle = wrap180(angle - heading);
-    this.trackPinpoint = false; // Switch to manual mode when target is set
-  }
-  public void faceTarget(Pose targetPose, Pose robotPose){
-      double angleToTargetFromCenter = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());
-      setTargetAngle(Math.toDegrees(angleToTargetFromCenter));
+    this.trackPinpoint = false;
+    this.isWrapping = false;
+    this.wrapStep = 0;
   }
 
-  /**
-   * Enable tracking with pinpoint odometry
-   * Turret will continuously update its target based on the robot's heading
-   */
+  public void faceTarget(Pose targetPose, Pose robotPose) {
+    double angleToTarget = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());
+    setTargetAngle(Math.toDegrees(angleToTarget));
+  }
+
   public void enablePinpointTracking() {
     this.trackPinpoint = true;
   }
 
-  /**
-   * Disable tracking with pinpoint odometry
-   * Turret will only move when setTargetAngle() is called
-   */
   public void disablePinpointTracking() {
     this.trackPinpoint = false;
   }
 
-  /**
-   * Check if pinpoint tracking is enabled
-   * @return true if turret is tracking with pinpoint, false if in manual mode
-   */
   public boolean isPinpointTrackingEnabled() {
     return trackPinpoint;
   }
 
   @Override
-  public LinkedList<TelemetryPacket> getTelemetry(){
-      return telemetryPackets;
+  public LinkedList<TelemetryPacket> getTelemetry() {
+    return telemetryPackets;
   }
 
-  public InstantCommand TargetAngle(double Angle){
-      return new InstantCommand(()->setTargetAngle(Angle));
+  public InstantCommand TargetAngle(double Angle) {
+    return new InstantCommand(() -> setTargetAngle(Angle));
   }
 
-  /**
-   * Minimal getter required by Vision subsystem to compute camera orientation.
-   * @return current turret angle in degrees (robot-relative)
-   */
   public double getCurrentTurretAngle() {
-      return currentTurretAngle;
+    return currentTurretAngle;
   }
 }

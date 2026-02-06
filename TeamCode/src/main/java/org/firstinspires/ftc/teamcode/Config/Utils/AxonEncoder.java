@@ -48,32 +48,24 @@ public class AxonEncoder {
 
         if (!initialized) {
             // First reading - initialize tracking
+            // Apply offset to get the "adjusted" raw angle
             previousRawAngle = rawAngle;
             unwrappedEncoderAngle = rawAngle + angleOffset;
             initialized = true;
             return;
         }
 
-        // Calculate the direct delta
+        // Calculate the direct delta in raw encoder space
         double delta = rawAngle - previousRawAngle;
 
-        // Context-aware wrap detection based on current unwrapped angle
-        // This distinguishes between the two test scenarios
-
-        if (delta < -300.0 && previousRawAngle > 300.0 && rawAngle < 60.0) {
-            // High → low crossing: e.g., 350° → 10°
-            // Only wrap if we're in a "positive" context (unwrapped angle suggests forward motion)
-            if (unwrappedEncoderAngle > 50.0) {
-                delta += 360.0;  // Forward wrap
-            }
-            // Otherwise, treat as continuous backward motion
-        } else if (delta > 300.0 && previousRawAngle < 60.0 && rawAngle > 300.0) {
-            // Low → high crossing: e.g., 10° → 350°
-            // Only wrap if we're in a "negative" context (unwrapped angle suggests backward motion)
-            if (unwrappedEncoderAngle < 100.0) {
-                delta -= 360.0;  // Backward wrap
-            }
-            // Otherwise, treat as continuous forward motion
+        // Simple wrap detection: if delta is larger than 180°, we wrapped
+        // This works because encoder can't physically move more than 180° in one loop
+        if (delta > 180.0) {
+            // Jumped from low to high (e.g., 10° → 350°) = moved backward across 0
+            delta -= 360.0;
+        } else if (delta < -180.0) {
+            // Jumped from high to low (e.g., 350° → 10°) = moved forward across 360
+            delta += 360.0;
         }
 
         // Accumulate the delta to our unwrapped angle

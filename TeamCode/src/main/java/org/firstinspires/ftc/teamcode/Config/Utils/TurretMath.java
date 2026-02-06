@@ -206,24 +206,39 @@ public class TurretMath {
         final double MAX_TURRET = 135.0;
         final double DANGER_THRESHOLD = 120.0; // Start being cautious when near limits
 
+        // Calculate the target turret angle (what we actually want to achieve)
+        double targetTurretAngle = wrap180(targetServoAngleSafe / gearRatio);
+
         // Find which 360° wrap we're currently in
         int currentWrapCount = (int) Math.round(currentServoAngle / 360.0);
 
         // Check current turret position
         double currentTurret = wrap180(currentServoAngle / gearRatio);
 
-        // Generate 3 candidates: one wrap behind, current wrap, one wrap ahead
-        double[] candidates = {
-            targetServoAngleSafe + ((currentWrapCount - 1) * 360.0),
-            targetServoAngleSafe + (currentWrapCount * 360.0),
-            targetServoAngleSafe + ((currentWrapCount + 1) * 360.0)
-        };
+        // Generate candidates - but use the TURRET-based wrap, not servo-based
+        // For a 2:1 gear ratio, turret wraps every 720° of servo
+        double servoPerTurretRotation = 360.0 * gearRatio; // 720° for 2:1
+        int turretWrapCount = (int) Math.round(currentServoAngle / servoPerTurretRotation);
+
+        // Generate candidates that actually achieve the target turret angle
+        // The target servo for a given turret angle is: turretAngle * gearRatio + N * servoPerTurretRotation
+        double[] candidates = new double[5];
+        for (int i = 0; i < 5; i++) {
+            candidates[i] = targetServoAngleSafe + ((turretWrapCount - 2 + i) * servoPerTurretRotation);
+        }
 
         // Find the candidate with minimum distance that doesn't pass through forbidden zone
-        double targetServoAngle = candidates[1]; // default to middle (current wrap)
+        double targetServoAngle = targetServoAngleSafe + (turretWrapCount * servoPerTurretRotation); // default
         double minDistance = Double.MAX_VALUE;
 
         for (double candidate : candidates) {
+            // CRITICAL: Verify this candidate actually achieves the target turret angle
+            double candidateTurret = wrap180(candidate / gearRatio);
+            if (Math.abs(candidateTurret - targetTurretAngle) > 1.0) {
+                // This candidate doesn't achieve the correct turret angle, skip it
+                continue;
+            }
+
             double distance = Math.abs(candidate - currentServoAngle);
 
             // Check if this candidate would require passing through the forbidden zone
@@ -253,9 +268,20 @@ public class TurretMath {
             }
         }
 
-        // If all candidates were rejected (shouldn't happen), fall back to current wrap
+        // If all candidates were rejected, find the closest one that achieves correct turret angle
         if (minDistance == Double.MAX_VALUE) {
-            targetServoAngle = candidates[1];
+            minDistance = Double.MAX_VALUE;
+            for (double candidate : candidates) {
+                double candidateTurret = wrap180(candidate / gearRatio);
+                if (Math.abs(candidateTurret - targetTurretAngle) > 1.0) {
+                    continue;
+                }
+                double distance = Math.abs(candidate - currentServoAngle);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    targetServoAngle = candidate;
+                }
+            }
         }
 
         return targetServoAngle;

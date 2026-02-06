@@ -133,7 +133,7 @@ public class Constants {
       public static boolean logTelemetry = false;
   }
   public static class Drivetrain {
-      public static final Pose Pose = new Pose(0, 0, 0);
+      public static final Pose Pose = new Pose(70, 70, 0);
 
       // Telemetry logging toggle for Drivetrain
       public static boolean logTelemetry = false;

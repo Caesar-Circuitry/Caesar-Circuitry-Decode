@@ -23,6 +23,10 @@ public class AnglePIDF {
     private double dangerZoneMax = 135.0;   // Maximum safe angle
     private boolean dangerZoneLimitEnabled = false;
 
+    // Unwrapped mode - when true, error is NOT wrapped to [-180, 180]
+    // Use this when controlling unwrapped encoder angles
+    private boolean unwrappedMode = false;
+
     private boolean firstRun = true;
 
     public AnglePIDF(double kP, double kI, double kD, double kF_left, double kF_right) {
@@ -82,7 +86,7 @@ public class AnglePIDF {
 
     /**
      * Calculate PIDF output
-     * @param measurement Current angle in degrees (can be any value, wrapping handled internally)
+     * @param measurement Current angle in degrees (can be any value, wrapping handled internally unless in unwrapped mode)
      * @return Power output from -1.0 to 1.0
      */
     public double calculate(double measurement) {
@@ -90,7 +94,7 @@ public class AnglePIDF {
         double effectiveSetPoint = setPoint;
 
         // If danger zone limiting is enabled, check if path would enter danger zone
-        if (dangerZoneLimitEnabled && pathEntersDangerZone(measurement, setPoint)) {
+        if (dangerZoneLimitEnabled && !unwrappedMode && pathEntersDangerZone(measurement, setPoint)) {
             // Path enters danger zone - take the long way around
             // Add 360 degrees to go the opposite direction
             if (setPoint > measurement) {
@@ -100,16 +104,23 @@ public class AnglePIDF {
             }
         }
 
-        // Calculate wrapped error using effective setpoint
-        double error = calculateWrappedError(effectiveSetPoint, measurement);
+        // Calculate error - either wrapped or unwrapped based on mode
+        double error;
+        if (unwrappedMode) {
+            // Direct error calculation for unwrapped angles (e.g., servo angles)
+            error = effectiveSetPoint - measurement;
+        } else {
+            // Wrapped error calculation for wrapped angles (e.g., turret angles)
+            error = calculateWrappedError(effectiveSetPoint, measurement);
+        }
 
         // Calculate derivative (rate of change of error)
         double derivative = 0.0;
         if (!firstRun) {
             derivative = error - lastError;
 
-            // Handle derivative discontinuity when error wraps
-            if (Math.abs(derivative) > 180.0) {
+            // Handle derivative discontinuity when error wraps (only in wrapped mode)
+            if (!unwrappedMode && Math.abs(derivative) > 180.0) {
                 // Wrap the derivative as well
                 if (derivative > 0) {
                     derivative -= 360.0;
@@ -168,6 +179,29 @@ public class AnglePIDF {
      */
     public double getIntegral() {
         return integral;
+    }
+
+    /**
+     * Enable unwrapped mode - error is calculated directly without wrapping
+     * Use this when controlling unwrapped encoder angles (like servo positions)
+     */
+    public void enableUnwrappedMode() {
+        this.unwrappedMode = true;
+    }
+
+    /**
+     * Disable unwrapped mode - error is wrapped to [-180, 180]
+     * Use this when controlling wrapped angles (like turret angles)
+     */
+    public void disableUnwrappedMode() {
+        this.unwrappedMode = false;
+    }
+
+    /**
+     * Check if unwrapped mode is enabled
+     */
+    public boolean isUnwrappedMode() {
+        return unwrappedMode;
     }
 
     /**
