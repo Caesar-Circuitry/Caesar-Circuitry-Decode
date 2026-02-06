@@ -27,6 +27,7 @@ public class Turret extends WSubsystem {
   private double targetAngle = 0;
   private double robotRelativeTargetAngle = 0;
   private boolean trackPinpoint = false;
+  private Pose targetPose = null; // Target pose for continuous tracking
 
   // State
   private double heading = 0;
@@ -83,9 +84,20 @@ public class Turret extends WSubsystem {
     wrappedCurrentTurret = wrap180(currentTurretAngle);
 
     // Get desired turret angle
-    desiredTurretAngle = trackPinpoint
-      ? wrap180(targetAngle - heading)
-      : robotRelativeTargetAngle;
+    if (targetPose != null) {
+      // Calculate field angle to target pose dynamically
+      Pose robotPose = follower.poseTracker.getPose();
+      double dx = targetPose.getX() - robotPose.getX();
+      double dy = targetPose.getY() - robotPose.getY();
+      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx));
+      // Negate the field angle, then convert to robot-relative with 180° offset (turret 0° faces robot's back)
+      desiredTurretAngle = wrap180(-fieldAngleToTarget - heading + 180.0);
+    } else if (trackPinpoint) {
+      // Add 180° offset for turret mounting (0° = robot's back)
+      desiredTurretAngle = wrap180(targetAngle - heading + 180.0);
+    } else {
+      desiredTurretAngle = robotRelativeTargetAngle;
+    }
 
     // Determine safe turret angle
     safeTurretAngle = calculateSafeTurretAngle(wrappedCurrentTurret, desiredTurretAngle);
@@ -320,13 +332,37 @@ public class Turret extends WSubsystem {
     this.targetAngle = angle;
     this.robotRelativeTargetAngle = wrap180(angle - heading);
     this.trackPinpoint = false;
+    this.targetPose = null; // Clear target pose tracking
     this.isWrapping = false;
     this.wrapStep = 0;
   }
 
   public void faceTarget(Pose targetPose, Pose robotPose) {
-    double angleToTarget = Math.atan2(targetPose.getY() - robotPose.getY(), targetPose.getX() - robotPose.getX());
-    setTargetAngle(Math.toDegrees(angleToTarget));
+    // Store the target pose for continuous tracking
+    // The loop() will calculate the angle to this pose every cycle
+    this.targetPose = targetPose;
+    this.trackPinpoint = false; // Not using fixed field angle
+    this.isWrapping = false;
+    this.wrapStep = 0;
+  }
+
+  /**
+   * Set a target pose to continuously track
+   * The turret will automatically calculate the angle to this pose as the robot moves
+   * @param targetPose The pose to point at
+   */
+  public void setTargetPose(Pose targetPose) {
+    this.targetPose = targetPose;
+    this.trackPinpoint = false;
+    this.isWrapping = false;
+    this.wrapStep = 0;
+  }
+
+  /**
+   * Clear the target pose and stop tracking
+   */
+  public void clearTargetPose() {
+    this.targetPose = null;
   }
 
   public void enablePinpointTracking() {
