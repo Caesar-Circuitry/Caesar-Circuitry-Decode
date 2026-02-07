@@ -18,6 +18,7 @@ public class BlueStartFromFar {
     // Control points for curves (no heading needed)
     private static final Pose INTAKE_0_CONTROL = new Pose(48.471, 63.679);
     private static final Pose INTAKE_1_CONTROL = new Pose(43.346, 30.552);
+    private static final Pose INTAKE_RAMP_CONTROL = new Pose(18.863, 57.418);
 
     public PathChain Launch0;
     public PathChain Intake0;
@@ -67,7 +68,7 @@ public class BlueStartFromFar {
                 .build();
 
         IntakeRamp0 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 
@@ -82,7 +83,7 @@ public class BlueStartFromFar {
                 .build();
 
         IntakeRamp1 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 
@@ -97,7 +98,7 @@ public class BlueStartFromFar {
                 .build();
 
         IntakeRamp2 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 

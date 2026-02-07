@@ -21,6 +21,7 @@ public class BlueStartFromClose {
     private static final Pose INTAKE_ARTIFACT_0_CONTROL = new Pose(40.363, 60.590);
     private static final Pose INTAKE_ARTIFACT_1_CONTROL = new Pose(46.241, 85.758);
     private static final Pose RAMP_0_CONTROL = new Pose(51.076, 78.325);
+    private static final Pose INTAKE_RAMP_CONTROL = new Pose(18.863, 57.418);
 
     public PathChain MoveToLaunch0;
     public PathChain IntakeArtifact0;
@@ -70,7 +71,7 @@ public class BlueStartFromClose {
                 .build();
 
         IntakeRamp0 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 
@@ -85,7 +86,7 @@ public class BlueStartFromClose {
                 .build();
 
         IntakeRamp1 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 
@@ -100,7 +101,7 @@ public class BlueStartFromClose {
                 .build();
 
         IntakeRamp2 = follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_APPROACH_POSE, RAMP_INTAKE_POSE)
+                        new BezierCurve(RAMP_APPROACH_POSE, INTAKE_RAMP_CONTROL, RAMP_INTAKE_POSE)
                 ).setLinearHeadingInterpolation(RAMP_APPROACH_POSE.getHeading(), RAMP_INTAKE_POSE.getHeading())
                 .build();
 
