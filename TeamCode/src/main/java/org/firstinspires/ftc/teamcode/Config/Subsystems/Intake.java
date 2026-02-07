@@ -109,6 +109,8 @@ public class Intake extends WSubsystem {
       // Sensor readings
       telemetryPackets.add(new TelemetryPacket("Intake Beam Broken", isIntakeBeamBroken));
       telemetryPackets.add(new TelemetryPacket("Transfer Beam Broken", isTransferBeamBroken));
+      telemetryPackets.add(new TelemetryPacket("Intake Raw State", intakeBeamBreak.getRawState()));
+      telemetryPackets.add(new TelemetryPacket("Transfer Raw State", transferBeamBreak.getRawState()));
       telemetryPackets.add(new TelemetryPacket("Intake Current(A)", intakeCurrentSensor.getCurrent()));
       telemetryPackets.add(new TelemetryPacket("Transfer Current(A)", transferCurrentSensor.getCurrent()));
     }

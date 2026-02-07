@@ -19,11 +19,13 @@ public class Constants {
     public static final boolean FLYWHEEL_MOTOR_LEAD_INVERTED = false;
     public static final boolean FLYWHEEL_MOTOR_FOLLOW_INVERTED = true;
 
-    public static double kP = 0.02;
+    public static double kP = 0.025;
     public static double kI = 0.015;
-    public static double kD = 0.0;
+    public static double kD = 0.0005;
     public static double kS = 0.13;
     public static double Kv = 0.0004065;
+    public static double spinupBoost = 0.5;  // Extra power added during spin-up for faster acceleration
+    public static double spinupThreshold = 200;  // Switch to normal control when within this velocity of target
     public static double NOMINAL_BATTERY_VOLTAGE = 12;
     public static double VOLTAGE_UPDATE_INTERVAL_SECONDS = 5;
 
@@ -36,7 +38,7 @@ public class Constants {
     public static final double intakeVelocity = -500;
 
     // Telemetry logging toggle for Launcher
-    public static boolean logTelemetry = false;
+    public static boolean logTelemetry = true;
   }
 
   public static class Intake {
@@ -81,9 +83,25 @@ public class Constants {
       public static final double gearRatio =
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
     public static double angleOffset = -180;
+
+      // Large PID - used when error is greater than ERROR_THRESHOLD
+      public static double kP_large = 0.012;
+      public static double kI_large = 0;
+      public static double kD_large = 0.0;
+
+      // Small PID - used when error is less than ERROR_THRESHOLD (fine tuning)
+      public static double kP_small = 0.006;
+      public static double kI_small = 0;
+      public static double kD_small = 0.001;
+
+      // Legacy single PID (kept for compatibility)
       public static  double kP = 0.008;
       public static  double kI = 0;
       public static  double kD = 0.000;
+
+      // Error threshold for switching between large and small PID (in degrees)
+      public static double ERROR_THRESHOLD = 30.0;
+
       public static double kF_left = 0.06; // Feedforward when turning left (positive error)
       public static  double kF_right = -0.08; // Feedforward when turning right (negative error)
 
@@ -91,7 +109,7 @@ public class Constants {
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
 
-      public static boolean logTelemetry = true;
+      public static boolean logTelemetry = false;
 
 
   }

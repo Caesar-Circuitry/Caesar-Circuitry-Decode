@@ -37,6 +37,7 @@ public class Turret extends WSubsystem {
   private double servoError = 0;
   private double servoPower = 0;
   private double voltageCompensation = 1.0;
+  private boolean usingLargePID = true;
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
@@ -141,10 +142,26 @@ public class Turret extends WSubsystem {
       }
     }
 
-    // Update controller with voltage-compensated kF values
+    // Select large or small PID based on error magnitude
+    // Large PID for fast response when far from target
+    // Small PID for fine tuning when close to target
+    double currentKp, currentKi, currentKd;
+    usingLargePID = Math.abs(servoError) > ERROR_THRESHOLD;
+
+    if (usingLargePID) {
+      currentKp = kP_large;
+      currentKi = kI_large;
+      currentKd = kD_large;
+    } else {
+      currentKp = kP_small;
+      currentKi = kI_small;
+      currentKd = kD_small;
+    }
+
+    // Update controller with selected PID and voltage-compensated kF values
     double compensatedKfLeft = kF_left * voltageCompensation;
     double compensatedKfRight = kF_right * voltageCompensation;
-    angleController.setCoefficients(kP, kI, kD, compensatedKfLeft, compensatedKfRight);
+    angleController.setCoefficients(currentKp, currentKi, currentKd, compensatedKfLeft, compensatedKfRight);
 
     // PID control
     angleController.setSetPoint(targetServoAngle);
@@ -155,7 +172,8 @@ public class Turret extends WSubsystem {
       angleController.reset();
     } else {
       basePower = angleController.calculate(unwrappedServoAngle);
-      if (Math.abs(servoError) < 30.0) {
+      // Limit power when using small PID (close to target) to reduce overshoot
+      if (!usingLargePID) {
         basePower = clamp(basePower, -0.5, 0.5);
       }
     }
@@ -199,6 +217,7 @@ public class Turret extends WSubsystem {
       telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("In Forbidden Zone", inForbiddenZone));
+      telemetryPackets.addLast(new TelemetryPacket("PID Mode", usingLargePID ? "LARGE" : "SMALL"));
       telemetryPackets.addLast(new TelemetryPacket("Battery Voltage", launcher != null ? launcher.getBatteryVoltageValue() : NOMINAL_VOLTAGE));
       telemetryPackets.addLast(new TelemetryPacket("Voltage Compensation", voltageCompensation));
       telemetryPackets.addLast(new TelemetryPacket("Heading", heading));

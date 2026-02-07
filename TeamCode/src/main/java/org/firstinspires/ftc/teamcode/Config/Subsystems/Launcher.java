@@ -27,7 +27,14 @@ public class Launcher extends WSubsystem {
 
   private double flywheelVelocity = 0.0;
   private double flywheelTargetVelocity = 0.0; // Ticks per second
-    private boolean stopPower;
+  private boolean stopPower;
+  private double currentKv = Constants.Launcher.Kv;
+  private boolean inSpinupMode = false;
+
+  // Spin-up timer
+  private ElapsedTime spinupTimer = new ElapsedTime();
+  private double lastSpinupTime = 0.0;
+  private boolean isSpinningUp = false;
 
 
   private List<VoltageSensor> voltageSensors;
@@ -97,20 +104,28 @@ public class Launcher extends WSubsystem {
     // If target is 0 and actual velocity is within deadband, stop motors to prevent oscillation
     if (flywheelTargetVelocity == 0 && Math.abs(flywheelVelocity) <= Constants.Launcher.VELOCITY_DEADBAND) {
       compensatedPower = 0.0;
+      updateTelemetry();
       return;
     }
     if (stopPower){
         compensatedPower =0.0;
+        updateTelemetry();
         return;
     }
 
+    // Track spin-up time
+    double velocityError = Math.abs(flywheelTargetVelocity - flywheelVelocity);
+    if (isSpinningUp && velocityError <= Constants.Launcher.Detection_DeadBand) {
+      lastSpinupTime = spinupTimer.seconds();
+      isSpinningUp = false;
+    }
 
-    // Calculate base power using PID controller + static feedforward
-    double basePower = MathUtils.clamp(
-        flywheelController.calculate(flywheelVelocity, flywheelTargetVelocity) + flywheelFeedforward.calculate(flywheelTargetVelocity),
-        -1,
-        1
-    );
+    flywheelFeedforward = new SimpleMotorFeedforward(Constants.Launcher.kS, Constants.Launcher.Kv, 0);
+
+    // Calculate base power using PID + feedforward
+    double pidOutput = flywheelController.calculate(flywheelVelocity, flywheelTargetVelocity);
+    double ffOutput = flywheelFeedforward.calculate(flywheelTargetVelocity);
+    double basePower = MathUtils.clamp(pidOutput + ffOutput, -1, 1);
 
     // Apply voltage compensation
     compensatedPower = basePower;
@@ -119,7 +134,10 @@ public class Launcher extends WSubsystem {
       compensatedPower = MathUtils.clamp(compensatedPower, -1, 1);
     }
 
-    // Telemetry logging
+    updateTelemetry();
+  }
+
+  private void updateTelemetry() {
     if (Constants.Launcher.logTelemetry) {
       telemetryPackets.clear();
       telemetryPackets.add(new TelemetryPacket("Target Velocity", flywheelTargetVelocity));
@@ -128,6 +146,9 @@ public class Launcher extends WSubsystem {
       telemetryPackets.add(new TelemetryPacket("Compensated Power", compensatedPower));
       telemetryPackets.add(new TelemetryPacket("Battery Voltage", batteryVoltage));
       telemetryPackets.add(new TelemetryPacket("StopPower", stopPower));
+      telemetryPackets.add(new TelemetryPacket("In Spinup Mode", inSpinupMode));
+      telemetryPackets.add(new TelemetryPacket("Spin-up Time (s)", lastSpinupTime));
+      telemetryPackets.add(new TelemetryPacket("Is Spinning Up", isSpinningUp));
       telemetryPackets.add(new TelemetryPacket("kP", Constants.Launcher.kP));
       telemetryPackets.add(new TelemetryPacket("kI", Constants.Launcher.kI));
       telemetryPackets.add(new TelemetryPacket("kD", Constants.Launcher.kD));
@@ -163,6 +184,11 @@ public class Launcher extends WSubsystem {
 
   public void setFlywheelTargetVelocity(double flywheelTargetVelocity) {
     setStopPower(false);
+    // Start spin-up timer when setting a new non-zero target
+    if (flywheelTargetVelocity != 0 && this.flywheelTargetVelocity != flywheelTargetVelocity) {
+      spinupTimer.reset();
+      isSpinningUp = true;
+    }
     this.flywheelTargetVelocity = flywheelTargetVelocity;
   }
 

@@ -172,7 +172,7 @@
       }
 //      telemetry.addData("Launcher Actual Velocity", hardware.getLauncher().getFlywheelVelocity());
 //      telemetry.addData("Laucher Target Velocity", hardware.getLauncher().getFlywheelTargetVelocity());
-      telemetry.addData("pose",hardware.getDrivetrain().getFollower().getPose());
+//      telemetry.addData("pose",hardware.getDrivetrain().getFollower().getPose());
       telemetry.update();
   }
      public void setGoalTarget() {

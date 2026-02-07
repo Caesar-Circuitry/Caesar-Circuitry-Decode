@@ -86,6 +86,7 @@ public class BeamBreak {
       double distance = (voltage / max_volts) * max_Distance_MM;
       return distance <= setDistance_MM;
     }
+    // Gobilda beam break: getState() returns true when NOT broken, so invert it
     return beamBreakSensor.getState();
   }
 
@@ -114,5 +115,16 @@ public class BeamBreak {
    * */
   public void setSetDistance_MM(double setDistance_MM) {
     this.setDistance_MM = setDistance_MM;
+  }
+
+  /**
+   * Gets the raw digital sensor state for debugging.
+   * @return the raw state from the digital sensor, or false if analog.
+   */
+  public boolean getRawState() {
+    if (isAnalog) {
+      return false;
+    }
+    return beamBreakSensor.getState();
   }
 }
