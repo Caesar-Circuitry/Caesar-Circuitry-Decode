@@ -33,6 +33,7 @@ public class TurretTest {
     @Mock private CRServo servo1;
     @Mock private CRServo servo2;
     @Mock private AnalogInput analogInput;
+    @Mock private Launcher launcher;
 
     private double degreesToVoltage(double degrees) {
         while (degrees < 0) degrees += 360;
@@ -60,7 +61,7 @@ public class TurretTest {
     @Test
     public void testBasicInitialization() {
         try {
-            Turret turret = new Turret(hardwareMap, follower);
+            Turret turret = new Turret(hardwareMap, follower, launcher);
             assertNotNull("Turret should initialize", turret);
         } catch (Exception e) {
             fail("Turret initialization should not throw exception: " + e.getMessage());
@@ -70,7 +71,7 @@ public class TurretTest {
     @Test
     public void testTelemetryNotNull() {
         try {
-            Turret turret = new Turret(hardwareMap, follower);
+            Turret turret = new Turret(hardwareMap, follower, launcher);
             LinkedList<TelemetryPacket> telemetry = turret.getTelemetry();
             assertNotNull("Telemetry should not be null", telemetry);
         } catch (Exception e) {
@@ -81,7 +82,7 @@ public class TurretTest {
     @Test
     public void testPinpointTrackingToggle() {
         try {
-            Turret turret = new Turret(hardwareMap, follower);
+            Turret turret = new Turret(hardwareMap, follower, launcher);
 
             boolean initialState = turret.isPinpointTrackingEnabled();
             turret.disablePinpointTracking();
@@ -97,7 +98,7 @@ public class TurretTest {
     @Test
     public void testTargetAngleCommandExists() {
         try {
-            Turret turret = new Turret(hardwareMap, follower);
+            Turret turret = new Turret(hardwareMap, follower, launcher);
             Object command = turret.TargetAngle(45.0);
             assertNotNull("TargetAngle command should not be null", command);
         } catch (Exception e) {
@@ -108,7 +109,7 @@ public class TurretTest {
     @Test
     public void testReadLoopWriteCycle() {
         try {
-            Turret turret = new Turret(hardwareMap, follower);
+            Turret turret = new Turret(hardwareMap, follower, launcher);
 
             // These should not throw exceptions
             turret.read();
