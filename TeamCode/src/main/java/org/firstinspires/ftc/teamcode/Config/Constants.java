@@ -33,9 +33,11 @@ public class Constants {
     public static final double VELOCITY_DEADBAND = 50.0;
     public static double Detection_DeadBand =20;
 
-    public static final double FarVelocity = 1850;
-        public static final double closeVelocity = 1250;
+    public static double FarVelocity = 1850;
+        public static double closeVelocity = 1250;
     public static final double intakeVelocity = -500;
+
+    public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
 
     // Telemetry logging toggle for Launcher
     public static boolean logTelemetry = true;

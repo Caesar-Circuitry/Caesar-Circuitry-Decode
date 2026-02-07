@@ -6,7 +6,9 @@ import java.util.LinkedList;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
+import org.threeten.bp.Instant;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -15,6 +17,7 @@ import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.controller.PIDFController;
 import com.seattlesolvers.solverslib.controller.wpilibcontroller.SimpleMotorFeedforward;
+import com.seattlesolvers.solverslib.util.InterpLUT;
 import com.seattlesolvers.solverslib.util.MathUtils;
 
 public class Launcher extends WSubsystem {
@@ -24,6 +27,9 @@ public class Launcher extends WSubsystem {
 
   private PIDFController flywheelController;
   private SimpleMotorFeedforward flywheelFeedforward;
+
+  private InterpLUT flywheelSpeeds = new InterpLUT();
+
 
   private double flywheelVelocity = 0.0;
   private double flywheelTargetVelocity = 0.0; // Ticks per second
@@ -49,6 +55,13 @@ public class Launcher extends WSubsystem {
     // Initialize motors
     flywheelLead = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_LEAD);
     flywheelFollow = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_FOLLOW);
+
+    flywheelSpeeds.add(18,1100);
+    flywheelSpeeds.add(31,1150);
+    flywheelSpeeds.add(51,1250);
+    flywheelSpeeds.add(60,1300);
+    flywheelSpeeds.add(69,1350);
+    flywheelSpeeds.createLUT();
 
     // Set motor directions
     flywheelLead.setDirection(
@@ -191,6 +204,14 @@ public class Launcher extends WSubsystem {
     }
     this.flywheelTargetVelocity = flywheelTargetVelocity;
   }
+  public void LaunchOnRange(double range){
+      setFlywheelTargetVelocity(flywheelSpeeds.get(range));
+  }
+  public void LaunchOnPose(Pose robotPose, Pose targetPose){
+      Pose LaunchPose = new Pose(robotPose.getX(),robotPose.getY() -Constants.Launcher.LUTDistance,robotPose.getHeading());
+      double distance = LaunchPose.distanceFrom(targetPose);
+      setFlywheelTargetVelocity(flywheelSpeeds.get(distance));
+  }
 
   public double getFlywheelVelocity() {
     return flywheelVelocity;
@@ -221,7 +242,10 @@ public class Launcher extends WSubsystem {
       return new InstantCommand(()->setFlywheelTargetVelocity(0));
   }
   public InstantCommand LaunchRange(double range){
-    return new InstantCommand(()->setFlywheelTargetVelocity(FlywheelKinematics.calculateFlywheelSpeed(range)));
+    return new InstantCommand(()->LaunchOnRange(range));
+  }
+  public InstantCommand LaunchPose(Pose robotPose, Pose targetPose){
+      return new InstantCommand(()->LaunchOnPose(robotPose,targetPose));
   }
   public InstantCommand stopPower(){
       return new InstantCommand(()->setStopPower(true));

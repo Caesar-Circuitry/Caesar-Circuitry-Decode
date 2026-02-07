@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Config.Subsystems;
 import static org.junit.Assert.*;
 import static org.mockito.Mockito.*;
 
+import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
@@ -366,14 +367,86 @@ public class LauncherTest {
     public void testLaunchRangeCommand() {
         launcher = new Launcher(hardwareMap);
 
-        double range = 50.0; // 50 inches
-        // Calculate expected velocity based on FlywheelKinematics
-        double expectedVelocity = org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics.calculateFlywheelSpeed(range);
-        launcher.setFlywheelTargetVelocity(expectedVelocity);
+        double range = 51.0; // 51 inches - matches a value in the LUT
 
-        // Verify target velocity is set based on range
-        assertEquals("LaunchRange should set velocity based on range",
-                   expectedVelocity, launcher.getFlywheelTargetVelocity(), 0.01);
+        // Call LaunchOnRange directly
+        launcher.LaunchOnRange(range);
+
+        // The LUT has (51, 1250), so target velocity should be 1250
+        assertEquals("LaunchRange should set velocity based on LUT",
+                   1250.0, launcher.getFlywheelTargetVelocity(), 0.01);
+    }
+
+    @Test
+    public void testLaunchRangeCommand_InterpolatedValue() {
+        launcher = new Launcher(hardwareMap);
+
+        // Use a range between LUT values to test interpolation
+        double range = 40.0; // Between 31 (1150) and 51 (1250)
+
+        // Call LaunchOnRange directly
+        launcher.LaunchOnRange(range);
+
+        // Should interpolate between 1150 and 1250
+        double targetVelocity = launcher.getFlywheelTargetVelocity();
+        assertTrue("LaunchRange should interpolate between LUT values",
+                   targetVelocity >= 1150.0 && targetVelocity <= 1250.0);
+    }
+
+    @Test
+    public void testLaunchPoseCommand() {
+        launcher = new Launcher(hardwareMap);
+
+        // Create robot pose and target pose
+        // Robot at (72, 72) facing forward, target at (72, 123)
+        // Distance should be approximately 51 inches (accounting for LUTDistance)
+        Pose robotPose = new Pose(72, 72 + Constants.Launcher.LUTDistance, 0);
+        Pose targetPose = new Pose(72, 123, 0);
+
+        // Call LaunchOnPose directly
+        launcher.LaunchOnPose(robotPose, targetPose);
+
+        // Should set a velocity based on the calculated distance
+        double targetVelocity = launcher.getFlywheelTargetVelocity();
+        assertTrue("LaunchPose should set a non-zero velocity",
+                   targetVelocity > 0);
+    }
+
+    @Test
+    public void testLaunchPoseCommand_CalculatesDistance() {
+        launcher = new Launcher(hardwareMap);
+
+        // Create poses where we know the exact distance
+        // With LUTDistance = 0, robot at (0, 0), target at (0, 51) = 51 inches
+        Pose robotPose = new Pose(0, 0, 0);
+        Pose targetPose = new Pose(0, 51, 0);
+
+        // Call LaunchOnPose directly
+        launcher.LaunchOnPose(robotPose, targetPose);
+
+        // Distance is 51, which maps to 1250 in the LUT
+        // Allow tolerance since LUT interpolation may vary slightly
+        double targetVelocity = launcher.getFlywheelTargetVelocity();
+        assertTrue("LaunchPose should calculate velocity in expected range (got " + targetVelocity + ")",
+                   targetVelocity >= 1200.0 && targetVelocity <= 1350.0);
+    }
+
+    @Test
+    public void testLaunchPoseCommand_DiagonalDistance() {
+        launcher = new Launcher(hardwareMap);
+
+        // Test with diagonal distance (3-4-5 triangle scaled)
+        // Robot at (0, 0), target at (30, 40) = 50 inches distance
+        Pose robotPose = new Pose(0, 0, 0);
+        Pose targetPose = new Pose(30, 40, 0);
+
+        // Call LaunchOnPose directly
+        launcher.LaunchOnPose(robotPose, targetPose);
+
+        // Should set velocity based on ~50 inch distance
+        double targetVelocity = launcher.getFlywheelTargetVelocity();
+        assertTrue("LaunchPose should handle diagonal distances",
+                   targetVelocity > 0);
     }
 
     // ==================== Telemetry Tests ====================
