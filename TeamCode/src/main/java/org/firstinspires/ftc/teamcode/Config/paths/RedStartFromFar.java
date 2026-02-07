@@ -6,23 +6,23 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 
-public class BlueStartFromFar {
-    // Unified pose points with headings (in radians)
-    public static final Pose START_POSE = new Pose(61.000, 7.000, Math.toRadians(180));
-    public static final Pose ARTIFACT_0_POSE = new Pose(23.791, 59.614, Math.toRadians(180));
-    public static final Pose LAUNCH_POSE = new Pose(52.000, 79.000, Math.toRadians(220));
-    public static final Pose ARTIFACT_1_POSE = new Pose(23.791, 35.579, Math.toRadians(180));
-    public static final Pose RAMP_APPROACH_POSE = new Pose(18.000, 69.000, Math.toRadians(180));
-    public static final Pose RAMP_INTAKE_POSE = new Pose(9.000, 58.000, Math.toRadians(100));
+public class RedStartFromFar {
+    // Unified pose points with headings (mirrored from BlueStartFromFar)
+    public static final Pose START_POSE = BlueStartFromFar.START_POSE.mirror();
+    public static final Pose ARTIFACT_0_POSE = BlueStartFromFar.ARTIFACT_0_POSE.mirror();
+    public static final Pose LAUNCH_POSE = BlueStartFromFar.LAUNCH_POSE.mirror();
+    public static final Pose ARTIFACT_1_POSE = BlueStartFromFar.ARTIFACT_1_POSE.mirror();
+    public static final Pose RAMP_APPROACH_POSE = BlueStartFromFar.RAMP_APPROACH_POSE.mirror();
+    public static final Pose RAMP_INTAKE_POSE = BlueStartFromFar.RAMP_INTAKE_POSE.mirror();
 
-    // Control points for curves (no heading needed)
-    public static final Pose INTAKE_0_CONTROL = new Pose(48.471, 63.679);
-    public static final Pose INTAKE_1_CONTROL = new Pose(43.346, 30.552);
-    public static final Pose INTAKE_RAMP_CONTROL = new Pose(18.863, 57.418);
+    // Control points for curves (mirrored from BlueStartFromFar)
+    public static final Pose INTAKE_0_CONTROL = BlueStartFromFar.INTAKE_0_CONTROL.mirror();
+    public static final Pose INTAKE_1_CONTROL = BlueStartFromFar.INTAKE_1_CONTROL.mirror();
+    public static final Pose INTAKE_RAMP_CONTROL = BlueStartFromFar.INTAKE_RAMP_CONTROL.mirror();
 
     private final Follower follower;
 
-    public BlueStartFromFar(Follower follower) {
+    public RedStartFromFar(Follower follower) {
         this.follower = follower;
     }
 

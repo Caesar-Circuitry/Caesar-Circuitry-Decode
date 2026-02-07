@@ -425,6 +425,18 @@ public class Turret extends WSubsystem {
     return new InstantCommand(() -> setTargetAngle(Angle));
   }
 
+  public InstantCommand TargetBlueGoal() {
+    return new InstantCommand(() -> setTargetPose(org.firstinspires.ftc.teamcode.Config.Constants.Robot.BlueGoal));
+  }
+
+  public InstantCommand TargetRedGoal() {
+    return new InstantCommand(() -> setTargetPose(org.firstinspires.ftc.teamcode.Config.Constants.Robot.RedGoal));
+  }
+
+  public InstantCommand StopTracking() {
+    return new InstantCommand(() -> clearTargetPose());
+  }
+
   public double getCurrentTurretAngle() {
     return currentTurretAngle;
   }
