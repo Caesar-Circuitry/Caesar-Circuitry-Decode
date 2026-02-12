@@ -127,12 +127,12 @@
       Right.whenInactive(hardware.getLauncher().stopPower());
       Left.whenInactive(hardware.getLauncher().stopPower());
       Left.whenActive(hardware.getLauncher().LaunchClose());
-      Right.whenActive(hardware.getLauncher().LaunchFar());
+      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
-      Cross.whenReleased(()->hardware.getTurret().faceTarget(Constants.Robot.Goal, hardware.getDrivetrain().getFollower().getPose()));
-      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
-      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
+//      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
+//      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
+      Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
   }
 
   public void read() {
@@ -147,6 +147,7 @@
 
   public void loop() {
     hardware.loop();
+//    hardware.getTurret().faceTarget(Constants.Robot.Goal, hardware.getDrivetrain().getFollower().getPose());
     updateTelemetry();
   }
 

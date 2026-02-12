@@ -157,6 +157,6 @@ public class Constants {
       public static Pose Pose = new Pose(70, 70, 0);
 
       // Telemetry logging toggle for Drivetrain
-      public static boolean logTelemetry = false;
+      public static boolean logTelemetry = true;
   }
 }

@@ -4,9 +4,7 @@ import java.util.List;
 import java.util.LinkedList;
 
 import org.firstinspires.ftc.teamcode.Config.Constants;
-import org.firstinspires.ftc.teamcode.Config.Utils.FlywheelKinematics;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
-import org.threeten.bp.Instant;
 
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.DcMotor;
@@ -56,11 +54,13 @@ public class Launcher extends WSubsystem {
     flywheelLead = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_LEAD);
     flywheelFollow = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_FOLLOW);
 
-    flywheelSpeeds.add(18,1100);
-    flywheelSpeeds.add(31,1150);
-    flywheelSpeeds.add(51,1250);
-    flywheelSpeeds.add(60,1300);
-    flywheelSpeeds.add(69,1350);
+    flywheelSpeeds.add(18,1000);
+    flywheelSpeeds.add(49,1100);
+    flywheelSpeeds.add(57,1150);
+    flywheelSpeeds.add(63,1200);
+    flywheelSpeeds.add(73,1250);
+    flywheelSpeeds.add(76,1275);
+    flywheelSpeeds.add(114,1500);
     flywheelSpeeds.createLUT();
 
     // Set motor directions

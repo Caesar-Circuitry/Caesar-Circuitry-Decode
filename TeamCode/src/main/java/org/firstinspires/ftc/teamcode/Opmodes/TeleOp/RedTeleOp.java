@@ -5,9 +5,11 @@ import com.bylazar.telemetry.PanelsTelemetry;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 
+import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.robot;
+
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
-public class TeleOp extends CommandOpMode {
+public class RedTeleOp extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;
 
@@ -15,6 +17,8 @@ public class TeleOp extends CommandOpMode {
     public void initialize() {
         super.reset();
         waitForStart();
+        Constants.Robot.alliance = Constants.Robot.Alliance.RED;
+        Constants.Robot.Goal = Constants.Robot.RedGoal;
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
         robot = new robot(hardwareMap,gamepad1,gamepad2,Telemetry);
         schedule(
