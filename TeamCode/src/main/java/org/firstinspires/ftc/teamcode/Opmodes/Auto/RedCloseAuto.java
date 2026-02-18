@@ -37,7 +37,7 @@ public class RedCloseAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         // ==================== LAUNCH 0 (Preload) ====================
                         new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch0().endPose(), Constants.Robot.RedGoal)),
-                        robot.getHardware().getTurret().TargetRedGoal(),
+//                        robot.getHardware().getTurret().TargetRedGoal(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch0()),
                         new LaunchWhenReady(robot.getHardware().getIntake(), robot.getHardware().getLauncher()),
                         new WaitCommand(LaunchTime),

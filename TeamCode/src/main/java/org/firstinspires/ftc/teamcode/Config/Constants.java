@@ -33,14 +33,14 @@ public class Constants {
     public static final double VELOCITY_DEADBAND = 50.0;
     public static double Detection_DeadBand =20;
 
-    public static double FarVelocity = 1850;
-        public static double closeVelocity = 1250;
+    public static double FarVelocity = 1200;
+        public static double closeVelocity = 1100;
     public static final double intakeVelocity = -500;
 
     public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
 
     // Telemetry logging toggle for Launcher
-    public static boolean logTelemetry = true;
+    public static boolean logTelemetry = false;
   }
 
   public static class Intake {
@@ -70,7 +70,7 @@ public class Constants {
 
     public static final double TRANSFER_MOTOR_FORWARD = -1.0;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
-    public static final double TRANSFER_MOTOR_HOLD = 0;
+    public static final double TRANSFER_MOTOR_HOLD = -0.0;
     public static final double TRANSFER_MOTOR_HP = 0.5;
 
     // Telemetry logging toggle for Intake
@@ -86,26 +86,26 @@ public class Constants {
               2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
     public static double angleOffset = -180;
 
-      // Large PID - used when error is greater than ERROR_THRESHOLD
-      public static double kP_large = 0.012;
+      // Large PID - used when error is greater than hysteresis threshold (40°)
+      public static double kP_large = 0.05;  // Reduced for smoother movement
       public static double kI_large = 0;
-      public static double kD_large = 0.0;
+      public static double kD_large = 0;  // Increased damping to reduce oscillation
 
-      // Small PID - used when error is less than ERROR_THRESHOLD (fine tuning)
-      public static double kP_small = 0.006;
-      public static double kI_small = 0;
-      public static double kD_small = 0.001;
+      // Small PID - used when error is less than hysteresis threshold (25°)
+      public static double kP_small = 0.005;  // Gentler for fine positioning
+      public static double kI_small = 0.000;    // No integral
+      public static double kD_small = 0;  // Damping for smooth stop
 
       // Legacy single PID (kept for compatibility)
-      public static  double kP = 0.008;
+      public static  double kP = 0.006;
       public static  double kI = 0;
-      public static  double kD = 0.000;
+      public static  double kD = 0.002;
 
-      // Error threshold for switching between large and small PID (in degrees)
+      // Error threshold (used for reference, actual switching uses hysteresis in code)
       public static double ERROR_THRESHOLD = 30.0;
 
-      public static double kF_left = 0.06; // Feedforward when turning left (positive error)
-      public static  double kF_right = -0.08; // Feedforward when turning right (negative error)
+      public static double kF_left = 0.04; // Reduced feedforward when turning left (positive error)
+      public static  double kF_right = -0.05; // Reduced feedforward when turning right (negative error)
 
       public static  double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red
@@ -137,18 +137,24 @@ public class Constants {
       // Limelight mounting position on turret (relative to robot center when turret at 0°)
       public static final double LIMELIGHT_X_OFFSET = 0.0; // inches forward from robot center
       public static final double LIMELIGHT_Y_OFFSET = 0.0; // inches left from robot center
-      public static final double LIMELIGHT_HEADING_OFFSET = 0.0; // degrees offset from turret angle
+      public static final double LIMELIGHT_HEADING_OFFSET = 270.0; // degrees offset: Limelight 0° = Pedro 270°, plus 180° for turret zero offset
 
-      // EKF Tuning parameters - measure these from EKF Tuner
+      // EKF Tuning parameters - measured from EKF Tuner (Pinpoint drift rates)
       public static final double X_DRIFT_SIGMA = 0.000348; // inches/sqrt(sec)
       public static final double Y_DRIFT_SIGMA = 0.000999; // inches/sqrt(sec)
       public static final double HEADING_DRIFT_SIGMA = 0.000182; // rad/sqrt(sec)
 
-      public static final double LIMELIGHT_X_STD = 0.001083; // inches
-      public static final double LIMELIGHT_Y_STD = 0.000438; // inches
-      public static final double LIMELIGHT_HEADING_STD = 0.000437; // radians
+      // Vision measurement noise (standard deviation) - measured from MT1
+      // Original measurements in meters: 0.0019, 0.005, 0.15 rad
+      public static final double LIMELIGHT_X_STD = 0.075; // inches (0.0019m * 39.3701)
+      public static final double LIMELIGHT_Y_STD = 0.2; // inches (0.005m * 39.3701)
+      public static final double LIMELIGHT_HEADING_STD = 0.15; // radians (~8.6 degrees)
 
       public static final double LOOP_TIME = 0.02; // 20ms = 50Hz
+
+      // Quality check thresholds
+      public static final int MIN_TAGS_FOR_CORRECTION = 1; // Minimum AprilTags needed for correction
+      public static final double MAX_TAG_DISTANCE = 120.0; // inches - reject readings from tags too far away
 
       // Telemetry logging toggle for Vision subsystem
       public static boolean logTelemetry = false;

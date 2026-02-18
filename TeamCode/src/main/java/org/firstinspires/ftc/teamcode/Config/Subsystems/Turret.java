@@ -27,11 +27,13 @@ public class Turret extends WSubsystem {
   // Configuration
   private double targetAngle = 0;
   private double robotRelativeTargetAngle = 0;
-  private boolean trackPinpoint = false;
+  private boolean trackPinpoint = true;
   private Pose targetPose = null; // Target pose for continuous tracking
 
   // State
   private double heading = 0;
+  private double filteredHeading = 0; // Low-pass filtered heading
+  private static final double HEADING_FILTER_ALPHA = 0.3; // 0 = no filtering, 1 = no smoothing
   private double currentTurretAngle = 0;
   private double targetServoAngle = 0;
   private double servoError = 0;
@@ -41,14 +43,18 @@ public class Turret extends WSubsystem {
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
-  private static final double ERROR_DEADBAND = 5.0;
-  private static final double WAYPOINT_THRESHOLD = 20.0;
-  private static final double NOMINAL_VOLTAGE = 12.82; // Nominal battery voltage for compensation
+  // Note: These are in SERVO SPACE (multiply turret degrees by gear ratio of 2)
+  private static final double HARD_DEADBAND = 4.0; // ~2° turret error - stop completely
+  private static final double SOFT_ZONE = 16.0; // ~8° turret error - reduced power zone for smooth approach
+  private static final double WAYPOINT_THRESHOLD = 35.0; // In turret space - increased for easier waypoint detection
+  private static final double NOMINAL_VOLTAGE = 12.3; // Nominal battery voltage for compensation
+  private static final double WRAP_MAX_POWER = 0.35; // Max power when wrapping - slower for precision
 
   // Wrap-around state
   private boolean isWrapping = false;
-  private int wrapStep = 0; // 0=not wrapping, 1-4=waypoints
+  private int wrapStep = 0; // 0=not wrapping, 1-3=waypoints
   private boolean wrapGoingPositive = false; // true = going toward +135, false = going toward -135
+  private boolean justFinishedWrap = false; // Prevents immediate re-wrap after completing
 
   // Waypoints: we always go through center
   // Going positive (from neg to pos): -135 → -10 → +10 → +135
@@ -77,7 +83,12 @@ public class Turret extends WSubsystem {
 
   @Override
   public void read() {
-    heading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
+    double rawHeading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
+    // Apply low-pass filter to reduce noise-induced oscillation
+    // Handle angle wrapping for the filter
+    double headingDiff = wrap180(rawHeading - filteredHeading);
+    filteredHeading = wrap180(filteredHeading + HEADING_FILTER_ALPHA * headingDiff);
+    heading = filteredHeading;
     turretEncoder.update();
   }
 
@@ -89,41 +100,87 @@ public class Turret extends WSubsystem {
     wrappedCurrentTurret = wrap180(currentTurretAngle);
 
     // Get desired turret angle
+    boolean usingHeadingCompensation = false;
     if (targetPose != null) {
       // Calculate field angle to target pose dynamically
       Pose robotPose = follower.poseTracker.getPose();
       double dx = targetPose.getX() - robotPose.getX();
       double dy = targetPose.getY() - robotPose.getY();
       double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx));
-      // Negate the field angle, then convert to robot-relative with 180° offset (turret 0° faces robot's back)
-      desiredTurretAngle = wrap180(-fieldAngleToTarget - heading + 180.0);
+      // Convert field angle to robot-relative: subtract robot heading
+      desiredTurretAngle = wrap180(fieldAngleToTarget - heading);
+      usingHeadingCompensation = true;
     } else if (trackPinpoint) {
-      // Add 180° offset for turret mounting (0° = robot's back)
-      desiredTurretAngle = wrap180(targetAngle - heading + 180.0);
+      // Convert target field angle to robot-relative
+      desiredTurretAngle = wrap180(targetAngle - heading);
+      usingHeadingCompensation = true;
     } else {
       desiredTurretAngle = robotRelativeTargetAngle;
     }
 
-    // Determine safe turret angle
-    safeTurretAngle = calculateSafeTurretAngle(wrappedCurrentTurret, desiredTurretAngle);
-
-    // Handle wrap state machine if wrapping
-    if (isWrapping) {
-      double waypoint = getCurrentWaypoint();
-
-      // Check if we reached the waypoint
-      if (Math.abs(wrappedCurrentTurret - waypoint) < WAYPOINT_THRESHOLD) {
-        wrapStep++;
-        if (wrapStep > 4) {
-          // Done wrapping
-          isWrapping = false;
-          wrapStep = 0;
+    // When using heading compensation, be more careful about starting wraps
+    // But if we're already wrapping, let it complete
+    if (usingHeadingCompensation && !isWrapping) {
+      // Clear cooldown if we're now on the same side as target or near center
+      if (justFinishedWrap) {
+        boolean sameSide = (wrappedCurrentTurret > 0) == (desiredTurretAngle > 0);
+        boolean nearCenter = Math.abs(wrappedCurrentTurret) < 60.0;
+        if (sameSide || nearCenter) {
+          justFinishedWrap = false;
         }
       }
 
-      // Override safe target with current waypoint while wrapping
-      if (isWrapping) {
+      // Not currently wrapping - check if we NEED to wrap
+      // Don't start a new wrap if we just finished one (cooldown)
+      boolean needsWrap = !justFinishedWrap &&
+                          Math.abs(wrappedCurrentTurret) > 90.0 &&
+                          Math.abs(desiredTurretAngle) > 90.0 &&
+                          (wrappedCurrentTurret > 0) != (desiredTurretAngle > 0);
+
+      if (needsWrap) {
+        // Start wrapping even in heading compensation mode
+        isWrapping = true;
+        wrapStep = 1;
+        wrapGoingPositive = desiredTurretAngle > 0;
         safeTurretAngle = getCurrentWaypoint();
+      } else {
+        // Clamp to safe limits
+        if (desiredTurretAngle > SAFE_LIMIT) {
+          safeTurretAngle = SAFE_LIMIT;
+        } else if (desiredTurretAngle < -SAFE_LIMIT) {
+          safeTurretAngle = -SAFE_LIMIT;
+        } else {
+          safeTurretAngle = desiredTurretAngle;
+        }
+      }
+    } else if (isWrapping) {
+      // Already wrapping - continue with wrap logic (handled below)
+      safeTurretAngle = getCurrentWaypoint();
+    } else {
+      // For robot-relative commands, use full wrap logic
+      safeTurretAngle = calculateSafeTurretAngle(wrappedCurrentTurret, desiredTurretAngle);
+    }
+
+    // Handle wrap state machine if wrapping
+    if (isWrapping) {
+      double waypoint = getCurrentWaypoint(); // Always 0 (center)
+      safeTurretAngle = waypoint;
+
+      // Check if we reached center (within threshold)
+      if (Math.abs(wrappedCurrentTurret) < WAYPOINT_THRESHOLD) {
+        // We're at center - done wrapping, now go to target
+        isWrapping = false;
+        wrapStep = 0;
+        justFinishedWrap = true; // Set cooldown to prevent immediate re-wrap
+
+        // Clamp and go to desired
+        if (desiredTurretAngle > SAFE_LIMIT) {
+          safeTurretAngle = SAFE_LIMIT;
+        } else if (desiredTurretAngle < -SAFE_LIMIT) {
+          safeTurretAngle = -SAFE_LIMIT;
+        } else {
+          safeTurretAngle = desiredTurretAngle;
+        }
       }
     }
 
@@ -142,11 +199,22 @@ public class Turret extends WSubsystem {
       }
     }
 
-    // Select large or small PID based on error magnitude
-    // Large PID for fast response when far from target
-    // Small PID for fine tuning when close to target
+    // Select large or small PID based on error magnitude with hysteresis
+    // Hysteresis prevents rapid switching: switch to SMALL at 25°, switch to LARGE at 40°
     double currentKp, currentKi, currentKd;
-    usingLargePID = Math.abs(servoError) > ERROR_THRESHOLD;
+    double absServoError = Math.abs(servoError);
+
+    if (usingLargePID) {
+      // Currently using large PID - switch to small when error drops below 25°
+      if (absServoError < 25.0) {
+        usingLargePID = false;
+      }
+    } else {
+      // Currently using small PID - switch to large when error exceeds 40°
+      if (absServoError > 40.0) {
+        usingLargePID = true;
+      }
+    }
 
     if (usingLargePID) {
       currentKp = kP_large;
@@ -163,28 +231,58 @@ public class Turret extends WSubsystem {
     double compensatedKfRight = kF_right * voltageCompensation;
     angleController.setCoefficients(currentKp, currentKi, currentKd, compensatedKfLeft, compensatedKfRight);
 
-    // PID control
+    // PID control with soft zone for smooth approach
     angleController.setSetPoint(targetServoAngle);
     double basePower;
+    double absError = Math.abs(servoError);
 
-    if (Math.abs(servoError) < ERROR_DEADBAND) {
+    if (absError < HARD_DEADBAND) {
+      // Very close to target - stop completely
       basePower = 0.0;
       angleController.reset();
+    } else if (absError < SOFT_ZONE) {
+      // In soft zone - use reduced power for smooth final approach
+      // Scale from 30% at HARD_DEADBAND to 70% at SOFT_ZONE edge
+      double scaleFactor = 0.3 + 0.4 * (absError - HARD_DEADBAND) / (SOFT_ZONE - HARD_DEADBAND);
+      basePower = angleController.calculate(unwrappedServoAngle) * scaleFactor;
     } else {
+      // Full PID power with mode-based limiting
       basePower = angleController.calculate(unwrappedServoAngle);
-      // Limit power when using small PID (close to target) to reduce overshoot
-      if (!usingLargePID) {
-        basePower = clamp(basePower, -0.5, 0.5);
+
+      // Limit power based on PID mode to prevent overshoot
+      if (usingLargePID) {
+        basePower = clamp(basePower, -0.6, 0.6); // Max 60% when far from target
+      } else {
+        basePower = clamp(basePower, -0.4, 0.4); // Max 40% when close to target
       }
     }
 
-    // SAFETY: If in forbidden zone (>140°), force movement toward center
-    boolean inForbiddenZone = Math.abs(wrappedCurrentTurret) > 140.0;
-    if (inForbiddenZone) {
+    // Special handling when wrapping - use slower, more controlled movement
+    if (isWrapping) {
+      basePower = clamp(basePower, -WRAP_MAX_POWER, WRAP_MAX_POWER);
+    }
+
+    // SAFETY: Gradual correction when approaching/in forbidden zone
+    // Start gentle correction at 130°, increase as we get further
+    boolean inForbiddenZone = false;
+    double absCurrentAngle = Math.abs(wrappedCurrentTurret);
+
+    if (absCurrentAngle > 130.0) {
+      inForbiddenZone = true;
+
+      // Calculate how far past 130° we are (0 at 130°, 1 at 150°)
+      double overrunFactor = clamp((absCurrentAngle - 130.0) / 20.0, 0.0, 1.0);
+
+      // Gradual corrective power: 0.15 at 130°, up to 0.35 at 150°
+      double correctivePower = 0.15 + (overrunFactor * 0.2);
+
+      // Apply correction toward center
       if (wrappedCurrentTurret > 0) {
-        basePower = -0.5;
+        // At positive angle, need negative power to go toward center
+        basePower = Math.min(basePower, -correctivePower);
       } else {
-        basePower = 0.5;
+        // At negative angle, need positive power to go toward center
+        basePower = Math.max(basePower, correctivePower);
       }
     }
 
@@ -195,12 +293,16 @@ public class Turret extends WSubsystem {
       telemetryPackets.clear();
 
       String status;
-      if (inForbiddenZone) {
-        status = "FORBIDDEN ZONE";
+      if (absCurrentAngle > 145.0) {
+        status = "FORBIDDEN ZONE (CRITICAL)";
+      } else if (inForbiddenZone) {
+        status = "EDGE ZONE - CORRECTING";
       } else if (isWrapping) {
-        status = "WRAPPING Step " + wrapStep + " → " + getCurrentWaypoint() + "°";
-      } else if (Math.abs(servoError) < ERROR_DEADBAND) {
+        status = "WRAPPING → center";
+      } else if (absError < HARD_DEADBAND) {
         status = "AT TARGET";
+      } else if (absError < SOFT_ZONE) {
+        status = "SOFT APPROACH";
       } else {
         status = "MOVING";
       }
@@ -228,108 +330,68 @@ public class Turret extends WSubsystem {
    * Calculate the safe turret angle, handling wrap-around logic
    *
    * RULES:
-   * 1. If target is in forbidden zone (>±135°), go to ±135° on the SAME SIDE AS TARGET
-   * 2. If target is reachable without crossing forbidden zone, go direct
-   * 3. If target requires crossing through ±180° (forbidden), start wrap sequence
+   * 1. If we can go direct (not crossing forbidden zone), do it
+   * 2. If we need to cross through ±180° (forbidden), go through center first
+   * 3. Always clamp final result to ±SAFE_LIMIT
    */
   private double calculateSafeTurretAngle(double current, double desired) {
-    // First, check if desired is in forbidden zone
-    boolean desiredInForbidden = Math.abs(desired) > SAFE_LIMIT;
-
-    if (desiredInForbidden) {
-      // Target is in forbidden zone - go to the limit on the SAME SIDE AS TARGET
-      // This way we get as close as possible to where we want to be
-      if (desired > 0) {
-        // Target is past +135°, go to +135°
-        // But we might need to wrap if we're on the negative side
-        if (current < -90.0) {
-          // We're far on negative side, need to wrap to reach +135
-          if (!isWrapping) {
-            isWrapping = true;
-            wrapStep = 1;
-            wrapGoingPositive = true;
-            return getCurrentWaypoint();
-          }
-        }
-        return SAFE_LIMIT;  // Go to +135
-      } else {
-        // Target is past -135°, go to -135°
-        // But we might need to wrap if we're on the positive side
-        if (current > 90.0) {
-          // We're far on positive side, need to wrap to reach -135
-          if (!isWrapping) {
-            isWrapping = true;
-            wrapStep = 1;
-            wrapGoingPositive = false;
-            return getCurrentWaypoint();
-          }
-        }
-        return -SAFE_LIMIT; // Go to -135
-      }
+    // Clamp desired to safe limits first
+    double clampedDesired = desired;
+    if (desired > SAFE_LIMIT) {
+      clampedDesired = SAFE_LIMIT;
+    } else if (desired < -SAFE_LIMIT) {
+      clampedDesired = -SAFE_LIMIT;
     }
 
-    // Desired is within safe range (-135 to +135)
-    // Check if we can reach it directly without crossing forbidden zone
-
-    boolean currentPositive = current >= 0;
-    boolean desiredPositive = desired >= 0;
-
-    // If same side, always safe to go direct
-    if (currentPositive == desiredPositive) {
-      if (!isWrapping) {
-        return desired;
-      }
-    }
-
-    // Opposite sides - check if we need to wrap
-    // We need to wrap if BOTH are far from center (>90°)
-    // because the direct path would cross through ±180° (forbidden)
-    boolean needsWrap = Math.abs(current) > 90.0 && Math.abs(desired) > 90.0;
-
-    if (needsWrap && !isWrapping) {
-      // Start wrap sequence
-      isWrapping = true;
-      wrapStep = 1;
-      wrapGoingPositive = desired > 0; // Going toward the target side
+    // If already wrapping, continue with waypoints
+    if (isWrapping) {
       return getCurrentWaypoint();
     }
 
-    if (!isWrapping) {
-      // Safe to go direct (one of us is near center)
-      return desired;
+    // Check if we're currently in the danger zone (close to ±180)
+    // If so, move toward safe limit first
+    if (Math.abs(current) > SAFE_LIMIT) {
+      return current > 0 ? SAFE_LIMIT : -SAFE_LIMIT;
     }
 
-    // If we're wrapping, the waypoint is returned in loop()
+    // If either is near center (within ±90°), we can go direct
+    if (Math.abs(current) <= 90.0 || Math.abs(clampedDesired) <= 90.0) {
+      return clampedDesired;
+    }
+
+    // Both are far from center (>90°)
+    boolean currentPositive = current > 0;
+    boolean desiredPositive = clampedDesired > 0;
+
+    // If same side, go direct
+    if (currentPositive == desiredPositive) {
+      return clampedDesired;
+    }
+
+    // Opposite sides AND both far from center - need to wrap through center
+    // Start wrapping sequence
+    isWrapping = true;
+    wrapStep = 1;
+    wrapGoingPositive = desiredPositive;
+
     return getCurrentWaypoint();
   }
 
+
+
+
   /**
    * Get the current waypoint for wrap sequence
+   * Simplified 2-step: just go to center (0°), then to target
    */
   private double getCurrentWaypoint() {
-    if (!isWrapping || wrapStep < 1 || wrapStep > 4) {
-      return safeTurretAngle;
+    if (!isWrapping || wrapStep < 1 || wrapStep > 2) {
+      return 0.0;
     }
 
-    if (wrapGoingPositive) {
-      // Going from negative to positive: -135 → -10 → +10 → +135
-      switch (wrapStep) {
-        case 1: return -SAFE_LIMIT; // -135
-        case 2: return -10.0;
-        case 3: return 10.0;
-        case 4: return SAFE_LIMIT;  // +135
-        default: return 0;
-      }
-    } else {
-      // Going from positive to negative: +135 → +10 → -10 → -135
-      switch (wrapStep) {
-        case 1: return SAFE_LIMIT;  // +135
-        case 2: return 10.0;
-        case 3: return -10.0;
-        case 4: return -SAFE_LIMIT; // -135
-        default: return 0;
-      }
-    }
+    // Step 1: Go to center
+    // Step 2: Done - handled by wrap completion logic
+    return 0.0; // Always go to center first
   }
 
   /**

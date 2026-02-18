@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -10,7 +11,7 @@ import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.paths.RedStartFromClose;
 import org.firstinspires.ftc.teamcode.Config.robot;
-
+@Autonomous
 public class RedClosePathOnly extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;
@@ -19,11 +20,13 @@ public class RedClosePathOnly extends CommandOpMode {
     @Override
     public void initialize() {
         super.reset();
-        waitForStart();
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
         robot = new robot(hardwareMap, Telemetry);
         paths = new RedStartFromClose(robot.getHardware().getFollower());
+//        robot.getHardware().getVision().setEnablePoseCorrection(false);
+        robot.getHardware().getTurret().disablePinpointTracking();
         robot.getHardware().getFollower().setStartingPose(RedStartFromClose.START_POSE);
+        waitForStart();
         schedule(
                 new RunCommand(this.robot::read),
                 new RunCommand(this.robot::loop),

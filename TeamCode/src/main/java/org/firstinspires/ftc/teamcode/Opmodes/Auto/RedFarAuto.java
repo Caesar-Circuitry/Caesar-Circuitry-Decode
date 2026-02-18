@@ -37,7 +37,7 @@ public class RedFarAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         // ==================== LAUNCH 0 (Preload from Start) ====================
                         new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(RedStartFromFar.START_POSE, Constants.Robot.RedGoal)),
-                        robot.getHardware().getTurret().TargetRedGoal(),
+//                        robot.getHardware().getTurret().TargetRedGoal(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.launch0()),
                         new LaunchWhenReady(robot.getHardware().getIntake(), robot.getHardware().getLauncher()),
                         new WaitCommand(LaunchTime),

@@ -20,6 +20,15 @@ public class BlueTeleOp extends CommandOpMode {
         Constants.Robot.Goal = Constants.Robot.BlueGoal;
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
         robot = new robot(hardwareMap,gamepad1,gamepad2,Telemetry);
+
+        // Attempt to set initial pose from vision (MT1)
+//        if (robot.getHardware().getVision().setInitialPoseFromVision()) {
+//            Telemetry.addLine("Initial pose set from vision");
+//        } else {
+//            Telemetry.addLine("Vision unavailable - using default pose");
+//        }
+//        Telemetry.update();
+
         schedule(
                 new RunCommand(this.robot::read),
                 new RunCommand(this.robot::loop),

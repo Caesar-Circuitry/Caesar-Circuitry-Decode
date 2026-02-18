@@ -213,18 +213,29 @@ public class VisionTest {
         vision = new Vision(hardwareMap, follower, turret);
         vision.setEnablePoseCorrection(true);
 
-        // Mock valid vision
+        // Mock valid vision with valid meter values (0.5m from center = ~91.7 inches)
         when(llResult.isValid()).thenReturn(true);
-        when(llResult.getBotpose_MT2()).thenReturn(pose3D);
-        when(pose3D.getPosition()).thenReturn(createPosition(60.0, 60.0, 0.0));
+        when(llResult.getBotpose()).thenReturn(pose3D); // MT1 uses getBotpose()
+        when(pose3D.getPosition()).thenReturn(createPosition(0.5, 0.5, 0.0)); // Valid meters (center origin)
         when(pose3D.getOrientation()).thenReturn(orientation);
         when(orientation.getYaw()).thenReturn(45.0);
+
+        // Mock fiducials for quality check to pass
+        List<LLResultTypes.FiducialResult> fiducials = new ArrayList<>();
+        LLResultTypes.FiducialResult fiducial = mock(LLResultTypes.FiducialResult.class);
+        Pose3D targetPose = mock(Pose3D.class);
+        Position targetPos = new Position();
+        targetPos.z = 1.0; // 1 meter = 39.37 inches - within MAX_TAG_DISTANCE
+        when(fiducial.getTargetPoseCameraSpace()).thenReturn(targetPose);
+        when(targetPose.getPosition()).thenReturn(targetPos);
+        fiducials.add(fiducial);
+        when(llResult.getFiducialResults()).thenReturn(fiducials);
 
         // Ensure limelight returns the mocked result
         when(limelight.getLatestResult()).thenReturn(llResult);
 
-        // Mock odometry
-        Pose odoPose = new Pose(50.0, 50.0, Math.toRadians(40.0));
+        // Mock odometry (in inches)
+        Pose odoPose = new Pose(85.0, 85.0, Math.toRadians(40.0));
         when(follower.getPose()).thenReturn(odoPose);
 
         vision.read();
@@ -291,24 +302,37 @@ public class VisionTest {
     public void testKalmanFilter_UpdateWithVision() {
         vision = new Vision(hardwareMap, follower, turret);
 
-        // Create actual Position object (not mocked) with public fields
+        // Create actual Position object (not mocked) with valid meter values
+        // Use 0.5m from center = 0.5 * 39.3701 + 72 = 91.685 inches from corner
         Position actualPosition = new Position();
-        actualPosition.x = 55.0; // Vision says 55
-        actualPosition.y = 55.0;
+        actualPosition.x = 0.5; // Vision says 0.5m from center
+        actualPosition.y = 0.5;
         actualPosition.z = 0.0;
 
-        // Mock vision with drift
+        // Mock vision with drift - use getBotpose() for MT1
         when(llResult.isValid()).thenReturn(true);
-        when(llResult.getBotpose_MT2()).thenReturn(pose3D);
+        when(llResult.getBotpose()).thenReturn(pose3D);
         when(pose3D.getPosition()).thenReturn(actualPosition);
         when(pose3D.getOrientation()).thenReturn(orientation);
         when(orientation.getYaw()).thenReturn(0.0);
 
+        // Mock fiducials for quality check to pass
+        List<LLResultTypes.FiducialResult> fiducials = new ArrayList<>();
+        LLResultTypes.FiducialResult fiducial = mock(LLResultTypes.FiducialResult.class);
+        Pose3D targetPose = mock(Pose3D.class);
+        Position targetPos = new Position();
+        targetPos.z = 1.0; // 1 meter = 39.37 inches - within MAX_TAG_DISTANCE
+        when(fiducial.getTargetPoseCameraSpace()).thenReturn(targetPose);
+        when(targetPose.getPosition()).thenReturn(targetPos);
+        fiducials.add(fiducial);
+        when(llResult.getFiducialResults()).thenReturn(fiducials);
+
         // Ensure limelight returns the mocked result
         when(limelight.getLatestResult()).thenReturn(llResult);
 
-        // Mock odometry with different position
-        Pose odoPose = new Pose(50.0, 50.0, 0.0); // Odometry says 50
+        // Mock odometry with different position (in inches)
+        // Vision says 91.685 inches, odometry says 85 inches - 6.685 inch drift
+        Pose odoPose = new Pose(85.0, 85.0, 0.0);
         when(follower.getPose()).thenReturn(odoPose);
 
         // Run multiple updates
@@ -350,9 +374,11 @@ public class VisionTest {
     public void testGetVisionPose_ValidVision() {
         vision = new Vision(hardwareMap, follower, turret);
 
+        // Use valid meter values (center origin: -1.83m to +1.83m)
+        // Limelight (0.5, 0.5) -> Pedro X = LL_Y * 39.3701 + 72 = 91.69, Pedro Y = LL_X * 39.3701 + 72 = 91.69
         when(llResult.isValid()).thenReturn(true);
-        when(llResult.getBotpose_MT2()).thenReturn(pose3D);
-        when(pose3D.getPosition()).thenReturn(createPosition(100.0, 100.0, 0.0));
+        when(llResult.getBotpose()).thenReturn(pose3D); // MT1 uses getBotpose()
+        when(pose3D.getPosition()).thenReturn(createPosition(0.5, 0.5, 0.0)); // 0.5 meters from center
         when(pose3D.getOrientation()).thenReturn(orientation);
         when(orientation.getYaw()).thenReturn(90.0);
 
@@ -365,8 +391,10 @@ public class VisionTest {
 
         assertNotNull("Should return vision pose", visionPose);
         assertEquals("Should return 3 values", 3, visionPose.length);
-        assertEquals("X should match", 100.0, visionPose[0], 0.01);
-        assertEquals("Y should match", 100.0, visionPose[1], 0.01);
+        // Expected: Limelight Y (0.5m) -> Pedro X = 0.5 * 39.3701 + 72 = 91.685 inches
+        // Expected: Limelight X (0.5m) -> Pedro Y = 0.5 * 39.3701 + 72 = 91.685 inches
+        assertEquals("X should match (from Limelight Y)", 91.685, visionPose[0], 0.1);
+        assertEquals("Y should match (from Limelight X)", 91.685, visionPose[1], 0.1);
     }
 
     @Test
@@ -385,9 +413,10 @@ public class VisionTest {
     public void testGetMT1Pose_ValidVision() {
         vision = new Vision(hardwareMap, follower, turret);
 
+        // Use 0,0 meters (field center) = 72,72 inches from corner (same after swap)
         when(llResult.isValid()).thenReturn(true);
         when(llResult.getBotpose()).thenReturn(pose3D); // MT1 uses getBotpose()
-        when(pose3D.getPosition()).thenReturn(createPosition(72.0, 72.0, 0.0));
+        when(pose3D.getPosition()).thenReturn(createPosition(0.0, 0.0, 0.0)); // Field center in meters
         when(pose3D.getOrientation()).thenReturn(orientation);
         when(orientation.getYaw()).thenReturn(0.0);
 
@@ -400,8 +429,9 @@ public class VisionTest {
 
         assertNotNull("Should return MT1 pose", mt1Pose);
         assertEquals("Should return 3 values", 3, mt1Pose.length);
-        assertEquals("X should match", 72.0, mt1Pose[0], 0.01);
-        assertEquals("Y should match", 72.0, mt1Pose[1], 0.01);
+        // Limelight (0,0) -> Pedro X = LL_Y * 39.3701 + 72 = 72, Pedro Y = LL_X * 39.3701 + 72 = 72
+        assertEquals("X should match (from Limelight Y)", 72.0, mt1Pose[0], 0.1);
+        assertEquals("Y should match (from Limelight X)", 72.0, mt1Pose[1], 0.1);
     }
 
     // ==================== Motif Detection Tests ====================
@@ -524,7 +554,7 @@ public class VisionTest {
         vision = new Vision(hardwareMap, follower, turret);
 
         when(llResult.isValid()).thenReturn(true);
-        when(llResult.getBotpose_MT2()).thenReturn(pose3D);
+        when(llResult.getBotpose()).thenReturn(pose3D); // MT1 uses getBotpose()
         when(pose3D.getPosition()).thenReturn(createPosition(3.0, 4.0, 0.0));
 
         // Ensure limelight returns the mocked result
@@ -707,18 +737,29 @@ public class VisionTest {
 
         for (int i = 0; i < 20; i++) {
             when(llResult.isValid()).thenReturn(true);
-            when(llResult.getBotpose_MT2()).thenReturn(pose3D);
+            when(llResult.getBotpose()).thenReturn(pose3D); // MT1 uses getBotpose()
 
-            // Vision reports position
-            when(pose3D.getPosition()).thenReturn(createPosition(55.0, 55.0, 0.0));
+            // Vision reports position in valid meters (0.5m from center = 91.685 inches)
+            when(pose3D.getPosition()).thenReturn(createPosition(0.5, 0.5, 0.0));
             when(pose3D.getOrientation()).thenReturn(orientation);
             when(orientation.getYaw()).thenReturn(0.0);
+
+            // Mock fiducials for quality check to pass
+            List<LLResultTypes.FiducialResult> fiducials = new ArrayList<>();
+            LLResultTypes.FiducialResult fiducial = mock(LLResultTypes.FiducialResult.class);
+            Pose3D targetPose = mock(Pose3D.class);
+            Position targetPos = new Position();
+            targetPos.z = 1.0; // 1 meter = 39.37 inches - within MAX_TAG_DISTANCE
+            when(fiducial.getTargetPoseCameraSpace()).thenReturn(targetPose);
+            when(targetPose.getPosition()).thenReturn(targetPos);
+            fiducials.add(fiducial);
+            when(llResult.getFiducialResults()).thenReturn(fiducials);
 
             // Ensure limelight returns the mocked result
             when(limelight.getLatestResult()).thenReturn(llResult);
 
-            // Odometry reports different position (simulating drift)
-            Pose odoPose = new Pose(50.0, 50.0, 0.0);
+            // Odometry reports different position (simulating drift) - 85 inches vs 91.685 inches
+            Pose odoPose = new Pose(85.0, 85.0, 0.0);
             when(follower.getPose()).thenReturn(odoPose);
 
             vision.read();

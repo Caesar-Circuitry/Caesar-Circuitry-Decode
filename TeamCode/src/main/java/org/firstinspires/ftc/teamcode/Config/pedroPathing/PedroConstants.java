@@ -20,10 +20,12 @@ public class PedroConstants {
           .mass(11.43)
           .forwardZeroPowerAcceleration(-57.0250923641167)
           .lateralZeroPowerAcceleration(-80.9344756485226)
-          .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0.0, 0.0, 0.0))
-          .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.01))
-          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.005, 0, 0, 0, 0.051))
-          .centripetalScaling(0.005);
+          .translationalPIDFCoefficients(new PIDFCoefficients(.12, 0.0, 0.0, 0.02))
+          .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.02))//.9
+          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.1, 0, 0, 0.6, 0.06))//0.005 0.051
+              .useSecondaryHeadingPIDF(true)
+              .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5,0,0,0.02))
+          .centripetalScaling(0.0005);
   public static MecanumConstants driveConstants =
       new MecanumConstants()
           .maxPower(1)
@@ -36,7 +38,9 @@ public class PedroConstants {
           .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
           .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
           .xVelocity(73.38216610405388)
-          .yVelocity(46.01475657065084);
+          .yVelocity(46.01475657065084)
+              .nominalVoltage(12)
+              .useVoltageCompensation(true);
 
   public static PinpointConstants localizerConstants =
       new PinpointConstants()
@@ -48,7 +52,7 @@ public class PedroConstants {
           .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
           .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
-  public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
+  public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1.2);
 
   public static Follower createFollower(HardwareMap hardwareMap) {
     return new FollowerBuilder(followerConstants, hardwareMap)

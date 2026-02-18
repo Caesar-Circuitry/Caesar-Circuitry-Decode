@@ -33,7 +33,7 @@ public class BlueStartFromClose {
         return follower.pathBuilder().addPath(
                         new BezierLine(START_POSE, LAUNCH_POSE_0)
                 ).setLinearHeadingInterpolation(START_POSE.getHeading(), LAUNCH_POSE_0.getHeading())
-                .setReversed()
+//                .setReversed()
                 .build();
     }
 

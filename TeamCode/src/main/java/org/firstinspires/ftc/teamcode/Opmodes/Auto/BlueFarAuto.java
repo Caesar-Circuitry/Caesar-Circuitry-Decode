@@ -38,7 +38,7 @@ public class BlueFarAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         // ==================== LAUNCH 0 (Preload from Start) ====================
                         new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(BlueStartFromFar.START_POSE, Constants.Robot.Goal)),
-                        robot.getHardware().getTurret().TargetBlueGoal(),
+//                        robot.getHardware().getTurret().TargetBlueGoal(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.launch0()),
                         new LaunchWhenReady(robot.getHardware().getIntake(), robot.getHardware().getLauncher()),
                         new WaitCommand(LaunchTime),

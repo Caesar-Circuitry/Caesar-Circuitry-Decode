@@ -16,7 +16,7 @@ public class robotHardware extends WSubsystem {
   private Launcher Launcher;
   private Intake Intake;
   private Turret Turret;
-  //private Vision vision;
+//  private Vision vision;
   private HardwareMap hardwareMap;
   List<LynxModule> hubs;
   private LinkedList<TelemetryPacket> telemetry;
@@ -29,8 +29,9 @@ public class robotHardware extends WSubsystem {
     this.Launcher = new Launcher(hardwareMap);
     this.Intake = new Intake(hardwareMap);
     this.Turret = new Turret(hardwareMap,drivetrain.getFollower(),getLauncher());
-    //this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
+//    this.vision = new Vision(hardwareMap,drivetrain.getFollower(),Turret);
     this.telemetry = new LinkedList<TelemetryPacket>();
+//    vision.setEnablePoseCorrection(true);
 
   }
 

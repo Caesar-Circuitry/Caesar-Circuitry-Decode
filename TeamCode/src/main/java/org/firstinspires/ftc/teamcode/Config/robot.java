@@ -127,11 +127,12 @@
       Right.whenInactive(hardware.getLauncher().stopPower());
       Left.whenInactive(hardware.getLauncher().stopPower());
       Left.whenActive(hardware.getLauncher().LaunchClose());
+      Right.whenActive(hardware.getLauncher().LaunchFar());
       Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
-//      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
-//      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
+      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
+      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
       Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
   }
 

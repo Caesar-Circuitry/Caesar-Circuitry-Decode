@@ -37,7 +37,7 @@ public class BlueCloseAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         // ==================== LAUNCH 0 (Preload) ====================
                         new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch0().endPose(), Constants.Robot.Goal)),
-                        robot.getHardware().getTurret().TargetBlueGoal(),
+//                        robot.getHardware().getTurret().TargetBlueGoal(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch0()),
                         new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
                         new WaitCommand(LaunchTime),
