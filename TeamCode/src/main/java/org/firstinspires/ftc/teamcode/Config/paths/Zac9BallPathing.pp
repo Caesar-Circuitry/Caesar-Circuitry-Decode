@@ -29,31 +29,35 @@ public class ZacPathing {
                 ).setLinearHeadingInterpolation(START_POSE.getHeading(), LAUNCH1_POSE.getHeading())
                 .build();
     }
+    new waitcommand(750);
     public PathChain moveToIntakeMid() {
         return follower.pathBuilder().addPath(
                         new BezierCurve(LAUNCH1_POSE, CONTROL_LAUNCH, INTAKE_MIDDLE)
                 ).setLinearHeadingInterpolation(LAUNCH1_POSE.getHeading(), INTAKE_MIDDLE.getHeading())
                 .build();
     }
+    new waitcommand(100);
     public PathChain moveToLaunchMid() {
         return follower.pathBuilder().addPath(
                         new BezierCurve(INTAKE_MIDDLE, CONTROL_LAUNCH, LAUNCH2_POSE)
                 ).setLinearHeadingInterpolation(INTAKE_MIDDLE.getHeading(), LAUNCH2_POSE.getHeading())
                 .build();
     }
+    new waitcommand(750);
     public PathChain moveToIntakeTop() {
         return follower.pathBuilder().addPath(
                         new BezierLine(LAUNCH2_POSE, INTAKE_TOP)
                 ).setLinearHeadingInterpolation(LAUNCH2_POSE.getHeading(), INTAKE_TOP.getHeading())
-//                .setReversed()
                 .build();
     }
+    new waitcommand(250);
     public PathChain moveToLaunchTop() {
         return follower.pathBuilder().addPath(
                         new BezierLine(INTAKE_TOP, LAUNCH2_POSE)
                 ).setLinearHeadingInterpolation(INTAKE_TOP.getHeading(), LAUNCH2_POSE.getHeading())
-//                .setReversed()
+                .setGlobalDeceleration(0.25)
                 .build();
     }
+    new waitcommand(750);
 
 }
