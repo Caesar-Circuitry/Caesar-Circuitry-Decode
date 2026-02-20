@@ -9,7 +9,7 @@ import com.pedropathing.paths.PathChain;
 public class ZacPathing {
     // Unified pose points with headings (in radians)
     public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
-    public static final Pose LAUNCH_POSE_ANGLE = new Pose(50,84, Math.toRadians(220));
+    public static final Pose LAUNCH_POSE_ANGLE = new Pose(50,84-12, Math.toRadians(220));
     public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(50,84, Math.toRadians(180));
     public static final Pose INTAKE_MIDDLE = new Pose(22,60,Math.toRadians(180));
     public static final Pose INTAKE_TOP = new Pose(22,84,Math.toRadians(180));
