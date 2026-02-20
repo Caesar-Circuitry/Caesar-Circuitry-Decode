@@ -81,7 +81,7 @@ public class Constants {
       public static final String servoName = "servo1";
       public static final String servoName2 = "servo2";
       // REV Through Bore encoder connected to a DcMotorEx port
-      public static final String encoderMotorName = "turretEncoder";
+      public static final String encoderMotorName = "Intake";
       public static final double TICKS_PER_REV = 8192.0; // REV Through Bore encoder resolution
 
       public static final double gearRatio = 103.0/28.0; // servo rotations per turret rotation (2:1 = servo rotates 2x)
