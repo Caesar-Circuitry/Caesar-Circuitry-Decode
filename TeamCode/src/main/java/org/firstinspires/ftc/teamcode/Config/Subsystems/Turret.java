@@ -6,10 +6,11 @@ import static org.firstinspires.ftc.teamcode.Config.Utils.TurretMath.*;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
-import org.firstinspires.ftc.teamcode.Config.Utils.AxonEncoder;
+import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
 import org.firstinspires.ftc.teamcode.Config.Utils.AnglePIDF;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
@@ -19,7 +20,7 @@ import java.util.LinkedList;
 public class Turret extends WSubsystem {
   private CRServo servo;
   private CRServo servo2;
-  private AxonEncoder turretEncoder;
+  private ThroughBoreEncoder turretEncoder;
   private AnglePIDF angleController;
   private Follower follower;
   private Launcher launcher; // For voltage compensation
@@ -71,7 +72,8 @@ public class Turret extends WSubsystem {
   public Turret(HardwareMap hardwareMap, Follower follower, Launcher launcher) {
     servo = hardwareMap.get(CRServo.class, servoName);
     servo2 = hardwareMap.get(CRServo.class, servoName2);
-    turretEncoder = new AxonEncoder(hardwareMap.get(com.qualcomm.robotcore.hardware.AnalogInput.class, servoEncoderName), gearRatio, angleOffset);
+    DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, encoderMotorName);
+    turretEncoder = new ThroughBoreEncoder(encoderMotor, gearRatio, TICKS_PER_REV, true);
     this.follower = follower;
     this.launcher = launcher; // Store launcher reference for voltage reading
     angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);

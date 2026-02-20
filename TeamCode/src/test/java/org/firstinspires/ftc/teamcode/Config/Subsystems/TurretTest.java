@@ -6,8 +6,8 @@ import static org.mockito.Mockito.*;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.localization.PoseTracker;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
 
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
@@ -25,20 +25,18 @@ import java.util.LinkedList;
 public class TurretTest {
 
     private static final double DELTA = 1.0;
-    private static final double MAX_VOLTAGE = 3.3;
+    private static final double TICKS_PER_REV = 8192.0;
 
     @Mock private HardwareMap hardwareMap;
     @Mock private Follower follower;
     @Mock private PoseTracker poseTracker;
     @Mock private CRServo servo1;
     @Mock private CRServo servo2;
-    @Mock private AnalogInput analogInput;
+    @Mock private DcMotorEx encoderMotor;
     @Mock private Launcher launcher;
 
-    private double degreesToVoltage(double degrees) {
-        while (degrees < 0) degrees += 360;
-        while (degrees >= 360) degrees -= 360;
-        return (degrees / 360.0) * MAX_VOLTAGE;
+    private int degreesToTicks(double degrees) {
+        return (int) (degrees / 360.0 * TICKS_PER_REV);
     }
 
     @Before
@@ -48,14 +46,14 @@ public class TurretTest {
         // Mock hardware
         when(hardwareMap.get(CRServo.class, "servo1")).thenReturn(servo1);
         when(hardwareMap.get(CRServo.class, "servo2")).thenReturn(servo2);
-        when(hardwareMap.get(AnalogInput.class, "rightServo")).thenReturn(analogInput);
+        when(hardwareMap.get(DcMotorEx.class, "turretEncoder")).thenReturn(encoderMotor);
 
         // Set up follower mock using reflection to avoid field access issues
         follower.poseTracker = poseTracker;
         when(poseTracker.getPose()).thenReturn(new Pose(0, 0, 0));
 
-        // Default encoder position
-        when(analogInput.getVoltage()).thenReturn(degreesToVoltage(180.0));
+        // Default encoder position (0 ticks = 0 degrees)
+        when(encoderMotor.getCurrentPosition()).thenReturn(0);
     }
 
     @Test

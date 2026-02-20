@@ -4,12 +4,12 @@ import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
-import com.qualcomm.robotcore.hardware.AnalogInput;
 import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
 import org.firstinspires.ftc.teamcode.Config.Constants;
-import org.firstinspires.ftc.teamcode.Config.Utils.AxonEncoder;
+import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,7 +33,7 @@ public class TurretZNTuner extends OpMode {
     // Hardware
     private CRServo servo;
     private CRServo servo2;
-    private AxonEncoder turretEncoder;
+    private ThroughBoreEncoder turretEncoder;
 
     // PID values - adjustable via dashboard
     public static double kP = 0.01;
@@ -86,8 +86,8 @@ public class TurretZNTuner extends OpMode {
         // Initialize hardware
         servo = hardwareMap.get(CRServo.class, Constants.Turret.servoName);
         servo2 = hardwareMap.get(CRServo.class, Constants.Turret.servoName2);
-        AnalogInput encoderInput = hardwareMap.get(AnalogInput.class, Constants.Turret.servoEncoderName);
-        turretEncoder = new AxonEncoder(encoderInput, Constants.Turret.gearRatio, Constants.Turret.angleOffset);
+        DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, Constants.Turret.encoderMotorName);
+        turretEncoder = new ThroughBoreEncoder(encoderMotor, Constants.Turret.gearRatio, Constants.Turret.TICKS_PER_REV, true);
 
         // Set initial PID values from Constants (only if not already set by dashboard)
         if (kP == 0.01) {

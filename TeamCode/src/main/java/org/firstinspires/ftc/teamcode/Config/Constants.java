@@ -80,11 +80,11 @@ public class Constants {
   public static class Turret {
       public static final String servoName = "servo1";
       public static final String servoName2 = "servo2";
-      public static final String servoEncoderName = "rightServo";
+      // REV Through Bore encoder connected to a DcMotorEx port
+      public static final String encoderMotorName = "turretEncoder";
+      public static final double TICKS_PER_REV = 8192.0; // REV Through Bore encoder resolution
 
-      public static final double gearRatio =
-              2; // servo rotations per turret rotation (2:1 = servo rotates 2x)
-    public static double angleOffset = -180;
+      public static final double gearRatio = 103.0/28.0; // servo rotations per turret rotation (2:1 = servo rotates 2x)
 
       // Large PID - used when error is greater than hysteresis threshold (40°)
       public static double kP_large = 0.05;  // Reduced for smoother movement

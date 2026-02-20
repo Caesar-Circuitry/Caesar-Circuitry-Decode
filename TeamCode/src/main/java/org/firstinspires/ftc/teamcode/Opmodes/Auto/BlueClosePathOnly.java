@@ -6,6 +6,7 @@ import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
+import com.seattlesolvers.solverslib.command.WaitCommand;
 import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 
 import org.firstinspires.ftc.teamcode.Config.Constants;
@@ -33,6 +34,10 @@ public class BlueClosePathOnly extends CommandOpMode {
                 new SequentialCommandGroup(
                         // ==================== MOVE TO LAUNCH 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch0()),
+
+                        //test
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToClose()),
+                        new WaitCommand(1000),
 
                         // ==================== INTAKE ARTIFACT 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeArtifact0()),
@@ -70,8 +75,17 @@ public class BlueClosePathOnly extends CommandOpMode {
                         // ==================== INTAKE RAMP 2 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeRamp2()),
 
-                        // ==================== MOVE TO LAUNCH 5 (Final) ====================
-                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch5())
+                        // ==================== MOVE TO LAUNCH 5 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch5()),
+
+                        // ==================== MOVE TO RAMP 3 ===================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRamp3()),
+
+                        // ==================== INTAKE RAMP 3 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeRamp3()),
+
+                        // ==================== MOVE TO LAUNCH 6 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch6())
                 )
         );
     }
