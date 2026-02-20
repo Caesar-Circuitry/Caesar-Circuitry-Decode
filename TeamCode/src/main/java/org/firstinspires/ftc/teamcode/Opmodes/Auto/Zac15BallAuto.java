@@ -33,29 +33,35 @@ public class Zac15BallAuto extends CommandOpMode {
                 new RunCommand(this.robot::write),
                 new SequentialCommandGroup(
                         // ==================== MOVE TO LAUNCH 0 ====================
-                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch()),
-                        new WaitCommand(750)
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
+                        new WaitCommand(250),
                         // ==================== INTAKE ARTIFACT 0 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeMid()),
-//                        new WaitCommand(100),
-//                        // ==================== MOVE TO LAUNCH 1 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo2ndLaunch()),
-//                        new WaitCommand(750),
-//                        // ==================== INTAKE ARTIFACT 1 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeTop()),
-//                        new WaitCommand(100),
-//                        // ==================== MOVE TO LAUNCH 2 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo3rdLaunch()),
-//                        new WaitCommand(750),
-//                        // ==================== MOVE TO RAMP 0 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate()),
-//                        new WaitCommand(250),
-//                        // ==================== INTAKE RAMP 0 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake()),
-//                        new WaitCommand(1000),
-//                        // ==================== MOVE TO LAUNCH 3 ====================
-//                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo4thLaunch()),
-//                        new WaitCommand(750),
+                        robot.getHardware().getIntake().GroundIntake(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeMid(),false),
+                        new WaitCommand(10),
+                        // ==================== MOVE TO LAUNCH 1 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo2ndLaunch(robot.getHardware().getIntake()),false),
+                        robot.getHardware().getIntake().Hold(),
+                        new WaitCommand(250),
+                        // ==================== INTAKE ARTIFACT 1 ====================
+                        robot.getHardware().getIntake().GroundIntake(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeTop(),false),
+                        new WaitCommand(10),
+                        // ==================== MOVE TO LAUNCH 2 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo3rdLaunch(), false),
+                        robot.getHardware().getIntake().Hold(),
+                        new WaitCommand(250),
+//                      // ==================== MOVE TO RAMP 0 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate(),false),
+                        new WaitCommand(150),
+                        // ==================== INTAKE RAMP 0 ====================
+                        robot.getHardware().getIntake().GroundIntake(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
+                        new WaitCommand(400),
+                        robot.getHardware().getIntake().Hold(),
+                        // ==================== MOVE TO LAUNCH 3 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo4thLaunch(),false),
+                        new WaitCommand(250)
 //                        // ==================== MOVE TO RAMP 1 ====================
 //                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate()),
 //                        new WaitCommand(250),

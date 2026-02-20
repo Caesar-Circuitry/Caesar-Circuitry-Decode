@@ -6,20 +6,22 @@ import com.pedropathing.geometry.BezierLine;
 import com.pedropathing.geometry.Pose;
 import com.pedropathing.paths.PathChain;
 
+import org.firstinspires.ftc.teamcode.Config.Subsystems.Intake;
+
 public class ZacPathing {
     // Unified pose points with headings (in radians)
     public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
-    public static final Pose LAUNCH_POSE_ANGLE = new Pose(50,84-12, Math.toRadians(220));
-    public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(50,84, Math.toRadians(180));
-    public static final Pose INTAKE_MIDDLE = new Pose(22,60,Math.toRadians(180));
-    public static final Pose INTAKE_TOP = new Pose(22,84,Math.toRadians(180));
-    public static final Pose GATE_HANDLE = new Pose(17.5,66,Math.toRadians(180));
-    public static final Pose RAMP_INTAKE = new Pose(12,52,Math.toRadians(125));
-    public static final Pose FINAL_LAUNCH = new Pose(58,102,Math.toRadians(137));
+    public static final Pose LAUNCH_POSE_ANGLE = new Pose(54,78, Math.toRadians(220));
+    public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(44,73, Math.toRadians(180));
+    public static final Pose INTAKE_MIDDLE = new Pose(16,48,Math.toRadians(180));
+    public static final Pose INTAKE_TOP = new Pose(12,73,Math.toRadians(180));
+    public static final Pose GATE_HANDLE = new Pose(11,56,Math.toRadians(180));
+    public static final Pose RAMP_INTAKE = new Pose(-11,44,Math.toRadians(100));
+    public static final Pose FINAL_LAUNCH = new Pose(58,90,Math.toRadians(137));
 
     // Control points for curves (no heading needed)
-    public static final Pose CONTROL_LAUNCH = new Pose(50,58);
-    public static final Pose CONTORL_GATE = new Pose(35,65);
+    public static final Pose CONTROL_LAUNCH = new Pose(45,46);
+    public static final Pose CONTROL_GATE = new Pose(35,65);
 
     private Follower follower;
 
@@ -39,7 +41,7 @@ public class ZacPathing {
                 ).setLinearHeadingInterpolation(LAUNCH_POSE_ANGLE.getHeading(), INTAKE_MIDDLE.getHeading())
                 .build();
     }
-    public PathChain moveTo2ndLaunch() {
+    public PathChain moveTo2ndLaunch(Intake intake) {
         return follower.pathBuilder().addPath(
                         new BezierCurve(INTAKE_MIDDLE, CONTROL_LAUNCH, LAUNCH_POSE_STRAIGHT)
                 ).setLinearHeadingInterpolation(INTAKE_MIDDLE.getHeading(), LAUNCH_POSE_STRAIGHT.getHeading())
@@ -53,14 +55,14 @@ public class ZacPathing {
     }
     public PathChain moveTo3rdLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(INTAKE_TOP, LAUNCH_POSE_ANGLE)
+                        new BezierLine(INTAKE_TOP, new Pose(LAUNCH_POSE_ANGLE.getX()-8,LAUNCH_POSE_ANGLE.getY()-6))
                 ).setLinearHeadingInterpolation(INTAKE_TOP.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .setGlobalDeceleration(0.25)
                 .build();
     }
     public PathChain moveToGate() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(LAUNCH_POSE_ANGLE, GATE_HANDLE)
+                        new BezierCurve(LAUNCH_POSE_ANGLE, CONTROL_GATE, GATE_HANDLE)
                 ).setLinearHeadingInterpolation(LAUNCH_POSE_ANGLE.getHeading(), GATE_HANDLE.getHeading())
                 .build();
     }
