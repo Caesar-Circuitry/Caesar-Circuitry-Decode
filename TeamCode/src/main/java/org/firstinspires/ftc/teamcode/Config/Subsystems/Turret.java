@@ -40,7 +40,6 @@ public class Turret extends WSubsystem {
   private double servoError = 0;
   private double servoPower = 0;
   private double voltageCompensation = 1.0;
-  private boolean usingLargePID = true;
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
@@ -198,39 +197,12 @@ public class Turret extends WSubsystem {
       }
     }
 
-    // Select large or small PID based on error magnitude with hysteresis
-    // Hysteresis prevents rapid switching: switch to SMALL at 25°, switch to LARGE at 40°
-    double currentKp, currentKi, currentKd;
-    double absServoError = Math.abs(servoError);
-
-    if (usingLargePID) {
-      // Currently using large PID - switch to small when error drops below 25°
-      if (absServoError < 25.0) {
-        usingLargePID = false;
-      }
-    } else {
-      // Currently using small PID - switch to large when error exceeds 40°
-      if (absServoError > 40.0) {
-        usingLargePID = true;
-      }
-    }
-
-    if (usingLargePID) {
-      currentKp = kP_large;
-      currentKi = kI_large;
-      currentKd = kD_large;
-    } else {
-      currentKp = kP_small;
-      currentKi = kI_small;
-      currentKd = kD_small;
-    }
-
-    // Update controller with selected PID and voltage-compensated kF values
+    // Update controller with voltage-compensated kF values
     double compensatedKfLeft = kF_left * voltageCompensation;
     double compensatedKfRight = kF_right * voltageCompensation;
-    angleController.setCoefficients(currentKp, currentKi, currentKd, compensatedKfLeft, compensatedKfRight);
+    angleController.setCoefficients(kP, kI, kD, compensatedKfLeft, compensatedKfRight);
 
-    // PID control - large or small PID with deadband
+    // PID + kV control with deadband
     angleController.setSetPoint(targetServoAngle);
     double basePower;
     double absError = Math.abs(servoError);
@@ -239,12 +211,8 @@ public class Turret extends WSubsystem {
       basePower = 0.0;
       angleController.reset();
     } else {
-      basePower = angleController.calculate(unwrappedServoAngle);
-      if (usingLargePID) {
-        basePower = clamp(basePower, -1.0, 1.0);
-      } else {
-        basePower = clamp(basePower, -0.6, 0.6);
-      }
+      basePower = angleController.calculate(unwrappedServoAngle) + kV * servoError;
+      basePower = clamp(basePower, -1.0, 1.0);
     }
 
     // SAFETY: Forbidden zone correction when past ±130°
@@ -279,7 +247,7 @@ public class Turret extends WSubsystem {
       } else if (absError < DEADBAND) {
         status = "AT TARGET";
       } else {
-        status = usingLargePID ? "MOVING (LARGE PID)" : "MOVING (SMALL PID)";
+        status = "MOVING";
       }
 
       telemetryPackets.addLast(new TelemetryPacket("=== STATUS ===", status));
@@ -294,7 +262,6 @@ public class Turret extends WSubsystem {
       telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("In Forbidden Zone", inForbiddenZone));
-      telemetryPackets.addLast(new TelemetryPacket("PID Mode", usingLargePID ? "LARGE" : "SMALL"));
       telemetryPackets.addLast(new TelemetryPacket("Battery Voltage", launcher != null ? launcher.getBatteryVoltageValue() : NOMINAL_VOLTAGE));
       telemetryPackets.addLast(new TelemetryPacket("Voltage Compensation", voltageCompensation));
       telemetryPackets.addLast(new TelemetryPacket("Heading", heading));

@@ -2,12 +2,14 @@ package org.firstinspires.ftc.teamcode.Config.Opmodes;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.bylazar.utils.LoopTimer;
 import com.qualcomm.robotcore.eventloop.opmode.OpMode;
 import com.qualcomm.robotcore.eventloop.opmode.TeleOp;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
 
@@ -29,6 +31,7 @@ import java.util.List;
 public class TurretZNTuner extends OpMode {
 
     PanelsTelemetry panelsTelemetry = PanelsTelemetry.INSTANCE;
+    private LoopTimer loopTimerCode;
 
     // Hardware
     private CRServo servo;
@@ -37,10 +40,11 @@ public class TurretZNTuner extends OpMode {
 
     // PID values - adjustable via dashboard
     public static double kP = 0.01;
-    public static double kI = 0.0;
-    public static double kD = 0.0;
-    public static double kfLeft = 0.04;
-    public static double kfRight = -0.05;
+    public static double kI = 0.0012;
+    public static double kD = 0.0001;
+    public static double kV = 0.018; // Velocity feedforward - scales with error to drive turret to target
+    public static double kfLeft = 0.11;
+    public static double kfRight = -0.11;
 
     // Target angle - adjustable via dashboard
     public static double targetAngle = 0;
@@ -88,12 +92,14 @@ public class TurretZNTuner extends OpMode {
         servo2 = hardwareMap.get(CRServo.class, Constants.Turret.servoName2);
         DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, Constants.Turret.encoderMotorName);
         turretEncoder = new ThroughBoreEncoder(encoderMotor, Constants.Turret.gearRatio, Constants.Turret.TICKS_PER_REV, true);
+        loopTimerCode = new LoopTimer();
 
         // Set initial PID values from Constants (only if not already set by dashboard)
         if (kP == 0.01) {
-            kP = Constants.Turret.kP_large;
-            kI = Constants.Turret.kI_large;
-            kD = Constants.Turret.kD_large;
+            kP = Constants.Turret.kP;
+            kI = Constants.Turret.kI;
+            kD = Constants.Turret.kD;
+            kV = Constants.Turret.kV;
             kfLeft = Constants.Turret.kF_left;
             kfRight = Constants.Turret.kF_right;
         }
@@ -113,6 +119,7 @@ public class TurretZNTuner extends OpMode {
 
     @Override
     public void loop() {
+        loopTimerCode.start();
         double dt = loopTimer.seconds();
         loopTimer.reset();
 
@@ -137,6 +144,7 @@ public class TurretZNTuner extends OpMode {
         double pTerm = kP * error;
         double iTerm = kI * integral;
         double dTerm = kD * derivative;
+        double vTerm = kV * error; // Velocity feedforward proportional to error
 
         // Feedforward
         double feedforward = 0;
@@ -146,7 +154,7 @@ public class TurretZNTuner extends OpMode {
             feedforward = kfRight;
         }
 
-        power = pTerm + iTerm + dTerm + feedforward;
+        power = pTerm + iTerm + dTerm + vTerm + feedforward;
         power = clamp(power, -1.0, 1.0);
 
         // Apply power
@@ -159,7 +167,11 @@ public class TurretZNTuner extends OpMode {
         }
 
         // Display telemetry
-        displayTelemetry(pTerm, iTerm, dTerm, feedforward, dt);
+        displayTelemetry(pTerm, iTerm, dTerm, vTerm, feedforward, dt);
+        loopTimerCode.end();
+        panelsTelemetry.getTelemetry().addData("LoopTimeHz",loopTimerCode.getHz());
+        panelsTelemetry.getTelemetry().addData("LoopTimeMs",loopTimerCode.getMs());
+        panelsTelemetry.getTelemetry().update();
     }
 
     private void handleControlFlags() {
@@ -267,13 +279,14 @@ public class TurretZNTuner extends OpMode {
         }
     }
 
-    private void displayTelemetry(double pTerm, double iTerm, double dTerm, double ff, double dt) {
+    private void displayTelemetry(double pTerm, double iTerm, double dTerm, double vTerm, double ff, double dt) {
         panelsTelemetry.getTelemetry().addData("=== TURRET ZN TUNER ===", "");
 
         // Current PID values
         panelsTelemetry.getTelemetry().addData("kP", kP);
         panelsTelemetry.getTelemetry().addData("kI", kI);
         panelsTelemetry.getTelemetry().addData("kD", kD);
+        panelsTelemetry.getTelemetry().addData("kV", kV);
 
         // Turret state
         panelsTelemetry.getTelemetry().addData("Current Angle", currentAngle);
@@ -285,6 +298,7 @@ public class TurretZNTuner extends OpMode {
         panelsTelemetry.getTelemetry().addData("P Term", pTerm);
         panelsTelemetry.getTelemetry().addData("I Term", iTerm);
         panelsTelemetry.getTelemetry().addData("D Term", dTerm);
+        panelsTelemetry.getTelemetry().addData("V Term", vTerm);
         panelsTelemetry.getTelemetry().addData("Feedforward", ff);
 
         // Oscillation recording
