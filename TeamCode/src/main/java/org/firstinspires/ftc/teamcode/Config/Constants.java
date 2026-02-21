@@ -34,7 +34,7 @@ public class Constants {
     public static double Detection_DeadBand =20;
 
     public static double FarVelocity = 1200;
-        public static double closeVelocity = 1100;
+        public static double closeVelocity = 1350;
     public static final double intakeVelocity = -500;
 
     public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
@@ -70,7 +70,7 @@ public class Constants {
 
     public static final double TRANSFER_MOTOR_FORWARD = -1.0;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
-    public static final double TRANSFER_MOTOR_HOLD = -0.0;
+    public static final double TRANSFER_MOTOR_HOLD = -0.15;
     public static final double TRANSFER_MOTOR_HP = 0.5;
 
     // Telemetry logging toggle for Intake
@@ -87,14 +87,14 @@ public class Constants {
       public static final double gearRatio = 103.0/28.0; // servo rotations per turret rotation (2:1 = servo rotates 2x)
 
       // Large PID - used when error is greater than hysteresis threshold (40°)
-      public static double kP_large = 0.05;  // Reduced for smoother movement
+      public static double kP_large = 0.006;  // Reduced for smoother movement 0.0
       public static double kI_large = 0;
-      public static double kD_large = 0;  // Increased damping to reduce oscillation
+      public static double kD_large = 0.0000075;  // Increased damping to reduce oscillation
 
       // Small PID - used when error is less than hysteresis threshold (25°)
-      public static double kP_small = 0.005;  // Gentler for fine positioning
-      public static double kI_small = 0.000;    // No integral
-      public static double kD_small = 0;  // Damping for smooth stop
+      public static double kP_small = 0.006;  // Gentler for fine positioning
+      public static double kI_small = 0.00001;    // No integral
+      public static double kD_small = 0.0000075;  // Damping for smooth stop
 
       // Legacy single PID (kept for compatibility)
       public static  double kP = 0.006;
@@ -104,14 +104,14 @@ public class Constants {
       // Error threshold (used for reference, actual switching uses hysteresis in code)
       public static double ERROR_THRESHOLD = 30.0;
 
-      public static double kF_left = 0.04; // Reduced feedforward when turning left (positive error)
-      public static  double kF_right = -0.05; // Reduced feedforward when turning right (negative error)
+      public static double kF_left = 0.06; // Reduced feedforward when turning left (positive error)
+      public static  double kF_right = -0.06; // Reduced feedforward when turning right (negative error)
 
       public static  double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
 
-      public static boolean logTelemetry = false;
+      public static boolean logTelemetry = true;
 
 
   }
@@ -163,6 +163,6 @@ public class Constants {
       public static Pose Pose = new Pose(70, 70, 0);
 
       // Telemetry logging toggle for Drivetrain
-      public static boolean logTelemetry = true;
+      public static boolean logTelemetry = false;
   }
 }

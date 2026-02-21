@@ -13,11 +13,11 @@ public class ZacPathing {
     public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
     public static final Pose LAUNCH_POSE_ANGLE = new Pose(54,78, Math.toRadians(220));
     public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(44,73, Math.toRadians(180));
-    public static final Pose INTAKE_MIDDLE = new Pose(16,48,Math.toRadians(180));
-    public static final Pose INTAKE_TOP = new Pose(12,73,Math.toRadians(180));
-    public static final Pose GATE_HANDLE = new Pose(11,56,Math.toRadians(180));
-    public static final Pose RAMP_INTAKE = new Pose(-11,44,Math.toRadians(100));
-    public static final Pose FINAL_LAUNCH = new Pose(58,90,Math.toRadians(137));
+    public static final Pose INTAKE_MIDDLE = new Pose(8,48,Math.toRadians(180));
+    public static final Pose INTAKE_TOP = new Pose(14,73,Math.toRadians(180));
+    public static final Pose GATE_HANDLE = new Pose(13,56,Math.toRadians(180));
+    public static final Pose RAMP_INTAKE = new Pose(-10,46,Math.toRadians(110));
+    public static final Pose FINAL_LAUNCH = new Pose(50,108,Math.toRadians(310));
 
     // Control points for curves (no heading needed)
     public static final Pose CONTROL_LAUNCH = new Pose(45,46);
@@ -70,11 +70,12 @@ public class ZacPathing {
         return follower.pathBuilder().addPath(
                         new BezierLine(GATE_HANDLE, RAMP_INTAKE)
                 ).setLinearHeadingInterpolation(GATE_HANDLE.getHeading(), RAMP_INTAKE.getHeading())
+                .setTValueConstraint(.7)
                 .build();
     }
     public PathChain moveTo4thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_INTAKE, LAUNCH_POSE_ANGLE)
+                        new BezierLine(RAMP_INTAKE, new Pose(LAUNCH_POSE_ANGLE.getX()-8,LAUNCH_POSE_ANGLE.getY()-6))
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .build();
     }

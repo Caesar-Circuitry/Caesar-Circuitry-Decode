@@ -44,12 +44,9 @@ public class Turret extends WSubsystem {
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
-  // Note: These are in SERVO SPACE (multiply turret degrees by gear ratio of 2)
-  private static final double HARD_DEADBAND = 4.0; // ~2° turret error - stop completely
-  private static final double SOFT_ZONE = 16.0; // ~8° turret error - reduced power zone for smooth approach
-  private static final double WAYPOINT_THRESHOLD = 35.0; // In turret space - increased for easier waypoint detection
+  private static final double DEADBAND = 4.0; // ~2° turret error - stop completely
+  private static final double WAYPOINT_THRESHOLD = 35.0; // In turret space - for waypoint detection
   private static final double NOMINAL_VOLTAGE = 12.3; // Nominal battery voltage for compensation
-  private static final double WRAP_MAX_POWER = 0.35; // Max power when wrapping - slower for precision
 
   // Wrap-around state
   private boolean isWrapping = false;
@@ -233,57 +230,35 @@ public class Turret extends WSubsystem {
     double compensatedKfRight = kF_right * voltageCompensation;
     angleController.setCoefficients(currentKp, currentKi, currentKd, compensatedKfLeft, compensatedKfRight);
 
-    // PID control with soft zone for smooth approach
+    // PID control - large or small PID with deadband
     angleController.setSetPoint(targetServoAngle);
     double basePower;
     double absError = Math.abs(servoError);
 
-    if (absError < HARD_DEADBAND) {
-      // Very close to target - stop completely
+    if (absError < DEADBAND) {
       basePower = 0.0;
       angleController.reset();
-    } else if (absError < SOFT_ZONE) {
-      // In soft zone - use reduced power for smooth final approach
-      // Scale from 30% at HARD_DEADBAND to 70% at SOFT_ZONE edge
-      double scaleFactor = 0.3 + 0.4 * (absError - HARD_DEADBAND) / (SOFT_ZONE - HARD_DEADBAND);
-      basePower = angleController.calculate(unwrappedServoAngle) * scaleFactor;
     } else {
-      // Full PID power with mode-based limiting
       basePower = angleController.calculate(unwrappedServoAngle);
-
-      // Limit power based on PID mode to prevent overshoot
       if (usingLargePID) {
-        basePower = clamp(basePower, -0.6, 0.6); // Max 60% when far from target
+        basePower = clamp(basePower, -1.0, 1.0);
       } else {
-        basePower = clamp(basePower, -0.4, 0.4); // Max 40% when close to target
+        basePower = clamp(basePower, -0.6, 0.6);
       }
     }
 
-    // Special handling when wrapping - use slower, more controlled movement
-    if (isWrapping) {
-      basePower = clamp(basePower, -WRAP_MAX_POWER, WRAP_MAX_POWER);
-    }
-
-    // SAFETY: Gradual correction when approaching/in forbidden zone
-    // Start gentle correction at 130°, increase as we get further
+    // SAFETY: Forbidden zone correction when past ±130°
     boolean inForbiddenZone = false;
     double absCurrentAngle = Math.abs(wrappedCurrentTurret);
 
     if (absCurrentAngle > 130.0) {
       inForbiddenZone = true;
-
-      // Calculate how far past 130° we are (0 at 130°, 1 at 150°)
       double overrunFactor = clamp((absCurrentAngle - 130.0) / 20.0, 0.0, 1.0);
-
-      // Gradual corrective power: 0.15 at 130°, up to 0.35 at 150°
       double correctivePower = 0.15 + (overrunFactor * 0.2);
 
-      // Apply correction toward center
       if (wrappedCurrentTurret > 0) {
-        // At positive angle, need negative power to go toward center
         basePower = Math.min(basePower, -correctivePower);
       } else {
-        // At negative angle, need positive power to go toward center
         basePower = Math.max(basePower, correctivePower);
       }
     }
@@ -298,15 +273,13 @@ public class Turret extends WSubsystem {
       if (absCurrentAngle > 145.0) {
         status = "FORBIDDEN ZONE (CRITICAL)";
       } else if (inForbiddenZone) {
-        status = "EDGE ZONE - CORRECTING";
+        status = "FORBIDDEN ZONE - CORRECTING";
       } else if (isWrapping) {
-        status = "WRAPPING → center";
-      } else if (absError < HARD_DEADBAND) {
+        status = "WRAPPING";
+      } else if (absError < DEADBAND) {
         status = "AT TARGET";
-      } else if (absError < SOFT_ZONE) {
-        status = "SOFT APPROACH";
       } else {
-        status = "MOVING";
+        status = usingLargePID ? "MOVING (LARGE PID)" : "MOVING (SMALL PID)";
       }
 
       telemetryPackets.addLast(new TelemetryPacket("=== STATUS ===", status));

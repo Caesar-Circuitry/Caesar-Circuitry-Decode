@@ -145,6 +145,20 @@ public class Intake extends WSubsystem {
   public InstantCommand HP_Intaking(){
       return new InstantCommand(()-> intakeState = State.HP_INTAKING);
   }
+  public InstantCommand openFeeder(){
+    return new InstantCommand(()->this.FeederServoTargetPos = Constants.Intake.FEEDER_SERVO_OPEN);
+  }
+  public InstantCommand closeFeeder(){
+    return new InstantCommand(()->this.FeederServoTargetPos = Constants.Intake.FEEDER_SERVO_CLOSE);
+  }
+  public void badOpenFeeder(){
+    this.FeederServo.setPosition(Constants.Intake.FEEDER_SERVO_OPEN);
+
+  }
+  public void badCloseFeeder(){
+    this.FeederServo.setPosition(Constants.Intake.FEEDER_SERVO_CLOSE);
+
+  }
 
   @Override
   public LinkedList<TelemetryPacket> getTelemetry() {
