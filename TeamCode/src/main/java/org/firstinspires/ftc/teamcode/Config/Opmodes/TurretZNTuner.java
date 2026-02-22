@@ -84,6 +84,7 @@ public class TurretZNTuner extends OpMode {
     // Status
     public static int peaksDetected = 0;
     public static double lastPeriod = 0;
+    private ElapsedTime loopSlowDown;
 
     @Override
     public void init() {
@@ -93,6 +94,7 @@ public class TurretZNTuner extends OpMode {
         DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, Constants.Turret.encoderMotorName);
         turretEncoder = new ThroughBoreEncoder(encoderMotor, Constants.Turret.gearRatio, Constants.Turret.TICKS_PER_REV, true);
         loopTimerCode = new LoopTimer();
+        loopSlowDown = new ElapsedTime();
 
         // Set initial PID values from Constants (only if not already set by dashboard)
         if (kP == 0.01) {
@@ -172,6 +174,8 @@ public class TurretZNTuner extends OpMode {
         panelsTelemetry.getTelemetry().addData("LoopTimeHz",loopTimerCode.getHz());
         panelsTelemetry.getTelemetry().addData("LoopTimeMs",loopTimerCode.getMs());
         panelsTelemetry.getTelemetry().update();
+        loopSlowDown.reset();
+        while (loopSlowDown.milliseconds()<=28){}
     }
 
     private void handleControlFlags() {

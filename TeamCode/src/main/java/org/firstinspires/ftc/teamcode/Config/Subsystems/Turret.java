@@ -8,10 +8,10 @@ import com.pedropathing.geometry.Pose;
 import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 
 import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
-import org.firstinspires.ftc.teamcode.Config.Utils.AnglePIDF;
 import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
 
 import java.util.LinkedList;
@@ -21,9 +21,12 @@ public class Turret extends WSubsystem {
   private CRServo servo;
   private CRServo servo2;
   private ThroughBoreEncoder turretEncoder;
-  private AnglePIDF angleController;
   private Follower follower;
-  private Launcher launcher; // For voltage compensation
+
+  // Direct PID state (matching TurretZNTuner)
+  private double lastError = 0;
+  private double integral = 0;
+  private final ElapsedTime loopTimer = new ElapsedTime();
 
   // Configuration
   private double targetAngle = 0;
@@ -39,13 +42,11 @@ public class Turret extends WSubsystem {
   private double targetServoAngle = 0;
   private double servoError = 0;
   private double servoPower = 0;
-  private double voltageCompensation = 1.0;
 
   // Constants
   private static final double SAFE_LIMIT = 135.0;
-  private static final double DEADBAND = 4.0; // ~2° turret error - stop completely
+  private static final double DEADBAND = 0; // ~2° turret error - stop completely
   private static final double WAYPOINT_THRESHOLD = 35.0; // In turret space - for waypoint detection
-  private static final double NOMINAL_VOLTAGE = 12.3; // Nominal battery voltage for compensation
 
   // Wrap-around state
   private boolean isWrapping = false;
@@ -71,12 +72,10 @@ public class Turret extends WSubsystem {
     DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, encoderMotorName);
     turretEncoder = new ThroughBoreEncoder(encoderMotor, gearRatio, TICKS_PER_REV, true);
     this.follower = follower;
-    this.launcher = launcher; // Store launcher reference for voltage reading
-    angleController = new AnglePIDF(kP, kI, kD, kF_left, kF_right);
-    angleController.enableUnwrappedMode();
     telemetryPackets = new LinkedList<>();
     turretEncoder.update();
     targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
+    loopTimer.reset();
   }
 
   @Override
@@ -185,51 +184,46 @@ public class Turret extends WSubsystem {
     // Calculate target servo angle
     targetServoAngle = calculateServoTarget(safeTurretAngle);
 
-    // Calculate error and power
-    servoError = targetServoAngle - unwrappedServoAngle;
+    // Calculate error in TURRET space (matching TurretZNTuner exactly)
+    double turretError = safeTurretAngle - wrappedCurrentTurret;
+    servoError = targetServoAngle - unwrappedServoAngle; // kept for telemetry
 
-    // Apply voltage compensation to feedforward values
-    voltageCompensation = 1.0;
-    if (launcher != null) {
-      double batteryVoltage = launcher.getBatteryVoltageValue();
-      if (batteryVoltage > 0.1) {
-        voltageCompensation = NOMINAL_VOLTAGE / batteryVoltage;
-      }
-    }
 
-    // Update controller with voltage-compensated kF values
-    double compensatedKfLeft = kF_left * voltageCompensation;
-    double compensatedKfRight = kF_right * voltageCompensation;
-    angleController.setCoefficients(kP, kI, kD, compensatedKfLeft, compensatedKfRight);
+    // Direct PID + kV on turret-space angles (identical to TurretZNTuner)
+    double dt = loopTimer.seconds();
+    loopTimer.reset();
 
-    // PID + kV control with deadband
-    angleController.setSetPoint(targetServoAngle);
     double basePower;
-    double absError = Math.abs(servoError);
+    double absError = Math.abs(turretError);
 
     if (absError < DEADBAND) {
       basePower = 0.0;
-      angleController.reset();
+      integral = 0;
+      lastError = 0;
     } else {
-      basePower = angleController.calculate(unwrappedServoAngle) + kV * servoError;
+      integral += turretError * dt;
+      integral = clamp(integral, -100, 100); // Anti-windup
+
+      double derivative = (dt > 0.001) ? (turretError - lastError) / dt : 0.0;
+      lastError = turretError;
+
+      double pTerm = kP * turretError;
+      double iTerm = kI * integral;
+      double dTerm = kD * derivative;
+      double vTerm = kV * turretError;
+
+      // Directional feedforward
+      double feedforward = 0;
+      if (turretError > 0) {
+        feedforward = kF_left;
+      } else if (turretError < 0) {
+        feedforward = kF_right;
+      }
+
+      basePower = pTerm + iTerm + dTerm + vTerm + feedforward;
       basePower = clamp(basePower, -1.0, 1.0);
     }
 
-    // SAFETY: Forbidden zone correction when past ±130°
-    boolean inForbiddenZone = false;
-    double absCurrentAngle = Math.abs(wrappedCurrentTurret);
-
-    if (absCurrentAngle > 130.0) {
-      inForbiddenZone = true;
-      double overrunFactor = clamp((absCurrentAngle - 130.0) / 20.0, 0.0, 1.0);
-      double correctivePower = 0.15 + (overrunFactor * 0.2);
-
-      if (wrappedCurrentTurret > 0) {
-        basePower = Math.min(basePower, -correctivePower);
-      } else {
-        basePower = Math.max(basePower, correctivePower);
-      }
-    }
 
     servoPower = clamp(basePower, -1.0, 1.0);
 
@@ -238,11 +232,7 @@ public class Turret extends WSubsystem {
       telemetryPackets.clear();
 
       String status;
-      if (absCurrentAngle > 145.0) {
-        status = "FORBIDDEN ZONE (CRITICAL)";
-      } else if (inForbiddenZone) {
-        status = "FORBIDDEN ZONE - CORRECTING";
-      } else if (isWrapping) {
+      if (isWrapping) {
         status = "WRAPPING";
       } else if (absError < DEADBAND) {
         status = "AT TARGET";
@@ -261,9 +251,6 @@ public class Turret extends WSubsystem {
       telemetryPackets.addLast(new TelemetryPacket("Wrap Direction", wrapGoingPositive ? "→ +135" : "→ -135"));
       telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
-      telemetryPackets.addLast(new TelemetryPacket("In Forbidden Zone", inForbiddenZone));
-      telemetryPackets.addLast(new TelemetryPacket("Battery Voltage", launcher != null ? launcher.getBatteryVoltageValue() : NOMINAL_VOLTAGE));
-      telemetryPackets.addLast(new TelemetryPacket("Voltage Compensation", voltageCompensation));
       telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
     }
   }
