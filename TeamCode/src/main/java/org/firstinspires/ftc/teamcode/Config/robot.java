@@ -9,6 +9,7 @@
  import com.pedropathing.geometry.Pose;
  import com.qualcomm.robotcore.hardware.Gamepad;
  import com.qualcomm.robotcore.hardware.HardwareMap;
+ import com.seattlesolvers.solverslib.command.InstantCommand;
  import com.seattlesolvers.solverslib.command.Robot;
  import com.seattlesolvers.solverslib.command.button.Button;
  import com.seattlesolvers.solverslib.command.button.GamepadButton;
@@ -42,6 +43,7 @@
      TriggerReader LeftTrigger; // Launch Close
      Trigger Right;
      Trigger Left;
+     Trigger RightOP;
 
   // the constructor with a specified opmode type
   /**
@@ -115,7 +117,7 @@
     Left = new Trigger(()->LeftTrigger.isDown());
     dpadDown = new GamepadButton(driver, GamepadKeys.Button.DPAD_DOWN);
     dpadUp = new GamepadButton(driver, GamepadKeys.Button.DPAD_UP);
-
+    RightOP = new Trigger(()->RightTrigger.isDown());
   }
 
   private void driverTriggerCommands() {
@@ -124,16 +126,21 @@
       LeftBumper.whenReleased(hardware.getIntake().Hold());
       RightBumper.whileHeld(hardware.getIntake().GroundIntake());
       LeftBumper.whileHeld(hardware.getIntake().HP_Intaking());
-      Right.whenInactive(hardware.getLauncher().stopPower());
-      Left.whenInactive(hardware.getLauncher().stopPower());
-      Left.whenActive(hardware.getLauncher().LaunchClose());
-      Right.whenActive(hardware.getLauncher().LaunchFar());
-      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
+//      Right.whenInactive(hardware.getLauncher().stopPower());
+//      Left.whenInactive(hardware.getLauncher().stopPower());
+//      Left.whenActive(hardware.getLauncher().LaunchFar());
+//      Right.whenActive(hardware.getLauncher().LaunchFar());
+//      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
       Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
       Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
       Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
+
+      //OPERATOR
+
+      RightOP.whenInactive(hardware.getLauncher().stopPower());
+      RightOP.whenActive(hardware.getLauncher().LaunchFar());
   }
 
   public void read() {

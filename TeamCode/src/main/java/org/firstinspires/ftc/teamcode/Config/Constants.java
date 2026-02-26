@@ -34,7 +34,7 @@ public class Constants {
     public static double Detection_DeadBand =20;
 
     public static double FarVelocity = 1200;
-        public static double closeVelocity = 1350;
+        public static double closeVelocity = 1225;//1350
     public static final double intakeVelocity = -500;
 
     public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
@@ -70,7 +70,7 @@ public class Constants {
 
     public static final double TRANSFER_MOTOR_FORWARD = -1.0;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
-    public static final double TRANSFER_MOTOR_HOLD = -0.15;
+    public static final double TRANSFER_MOTOR_HOLD = -0.35;
     public static final double TRANSFER_MOTOR_HP = 0.5;
 
     // Telemetry logging toggle for Intake
@@ -99,7 +99,7 @@ public class Constants {
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
 
-      public static boolean logTelemetry = true;
+      public static boolean logTelemetry = false;
 
 
   }
@@ -145,7 +145,7 @@ public class Constants {
       public static final double MAX_TAG_DISTANCE = 120.0; // inches - reject readings from tags too far away
 
       // Telemetry logging toggle for Vision subsystem
-      public static boolean logTelemetry = false;
+      public static boolean logTelemetry = true;
   }
   public static class Drivetrain {
       public static Pose Pose = new Pose(70, 70, 0);

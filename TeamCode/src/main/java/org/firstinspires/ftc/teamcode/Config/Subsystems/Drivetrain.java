@@ -85,9 +85,9 @@ public class Drivetrain extends WSubsystem {
      */
     public void resetDrive() {
         if (Constants.Robot.alliance == Constants.Robot.Alliance.BLUE) {
-            follower.setPose(new Pose(8, 6.25, Math.toRadians(0)).mirror());
+            follower.setPose(new Pose(8, 9.25, Math.toRadians(-90)).mirror());
         } else {
-            follower.setPose(new Pose(8, 6.25, Math.toRadians(0)));
+            follower.setPose(new Pose(8, 9.25, Math.toRadians(-90)));
         }
     }
 

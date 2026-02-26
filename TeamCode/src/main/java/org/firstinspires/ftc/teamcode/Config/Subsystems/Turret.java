@@ -103,7 +103,8 @@ public class Turret extends WSubsystem {
       Pose robotPose = follower.poseTracker.getPose();
       double dx = targetPose.getX() - robotPose.getX();
       double dy = targetPose.getY() - robotPose.getY();
-      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx));
+      // Pedro uses heading 0 = +Y direction, so use atan2(dx, dy) to match
+      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dx, dy));
       // Convert field angle to robot-relative: subtract robot heading
       desiredTurretAngle = wrap180(fieldAngleToTarget - heading);
       usingHeadingCompensation = true;
@@ -430,5 +431,13 @@ public class Turret extends WSubsystem {
 
   public double getCurrentTurretAngle() {
     return currentTurretAngle;
+  }
+
+  /**
+   * Returns true if the desired turret angle exceeds the ±135° safe limit
+   * and is being clamped. Useful for triggering controller rumble.
+   */
+  public boolean isTargetClamped() {
+    return Math.abs(desiredTurretAngle) > SAFE_LIMIT && !isWrapping;
   }
 }

@@ -26,7 +26,7 @@ public class Zac15BallAuto extends CommandOpMode {
         super.reset();
         Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
         robot = new robot(hardwareMap, Telemetry);
-        robot.getHardware().getTurret().disablePinpointTracking();
+        robot.getHardware().getTurret().enablePinpointTracking();
         paths = new ZacPathing(robot.getHardware().getFollower());
         robot.getHardware().getFollower().setStartingPose(ZacPathing.START_POSE);
         robot.getHardware().getIntake().badCloseFeeder();
@@ -38,15 +38,11 @@ public class Zac15BallAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         robot.getHardware().getIntake().Hold(),
                         robot.getHardware().getLauncher().LaunchClose(),
-                        robot.getHardware().getTurret().TargetAngle(40),
+                        robot.getHardware().getTurret().TargetAngle(54),
                         // ==================== MOVE TO LAUNCH 0 ====================
-                        new ParallelCommandGroup(
-                                new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
-                                new SequentialCommandGroup(
-                                        new WaitCommand(1500),
-                                        robot.getHardware().getIntake().Launch()
-                                        )),
-                        new WaitCommand(500),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
+                        robot.getHardware().getIntake().Launch(),
+                        new WaitCommand(800),
                         robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
