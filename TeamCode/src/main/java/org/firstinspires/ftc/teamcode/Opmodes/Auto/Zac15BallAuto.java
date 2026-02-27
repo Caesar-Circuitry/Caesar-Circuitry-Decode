@@ -37,8 +37,8 @@ public class Zac15BallAuto extends CommandOpMode {
                 new RunCommand(this.robot::write),
                 new SequentialCommandGroup(
                         robot.getHardware().getIntake().Hold(),
-                        robot.getHardware().getLauncher().LaunchClose(),
-                        robot.getHardware().getTurret().TargetAngle(54),
+                        robot.getHardware().getLauncher().LaunchSpeed(1200),
+                        robot.getHardware().getTurret().TargetAngle(52),
                         // ==================== MOVE TO LAUNCH 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
                         robot.getHardware().getIntake().Launch(),
@@ -46,33 +46,43 @@ public class Zac15BallAuto extends CommandOpMode {
                         robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
+                        robot.getHardware().getLauncher().LaunchSpeed(1125),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeMid(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(45),
+                        robot.getHardware().getTurret().TargetAngle(-49),
                         // ==================== MOVE TO LAUNCH 1 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo2ndLaunch(robot.getHardware().getIntake()),false),
                         robot.getHardware().getIntake().Hold(),
-                        new WaitCommand(250),
+                        robot.getHardware().getIntake().Launch(),
+                        new WaitCommand(800),
+                        robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
+                        robot.getHardware().getLauncher().LaunchSpeed(1170),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeTop(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(90),
+                        robot.getHardware().getTurret().TargetAngle(-99),
                         // ==================== MOVE TO LAUNCH 2 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo3rdLaunch(), false),
                         robot.getHardware().getIntake().Hold(),
-                        new WaitCommand(250),
+                        robot.getHardware().getIntake().Launch(),
+                        new WaitCommand(800),
+                        robot.getHardware().getIntake().closeFeeder(),
 //                      // ==================== MOVE TO RAMP 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate(),false),
                         new WaitCommand(50),
                         // ==================== INTAKE RAMP 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
-                        new WaitCommand(300),
+                        robot.getHardware().getTurret().TargetAngle(-85),
+                        new WaitCommand(400),
                         robot.getHardware().getIntake().Hold(),
                         // ==================== MOVE TO LAUNCH 3 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo4thLaunch(),false),
-                        new WaitCommand(500),
+                        robot.getHardware().getIntake().Hold(),
+                        robot.getHardware().getIntake().Launch(),
+                        new WaitCommand(1000),
+                        robot.getHardware().getIntake().closeFeeder(),
                         // ==================== MOVE TO RAMP 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate(),false),

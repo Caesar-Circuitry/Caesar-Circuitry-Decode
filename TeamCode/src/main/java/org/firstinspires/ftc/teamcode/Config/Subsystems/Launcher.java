@@ -242,6 +242,9 @@ public class Launcher extends WSubsystem {
   public InstantCommand LaunchClose(){
     return new InstantCommand(()->setFlywheelTargetVelocity(Constants.Launcher.closeVelocity));
   }
+  public InstantCommand LaunchSpeed(double speed){
+      return new InstantCommand(()->setFlywheelTargetVelocity(speed));
+  }
   public InstantCommand HPIntake(){
     return new InstantCommand(()->setFlywheelTargetVelocity(Constants.Launcher.intakeVelocity));
   }
