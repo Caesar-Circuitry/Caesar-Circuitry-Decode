@@ -2,6 +2,10 @@ package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
 import com.seattlesolvers.solverslib.command.SubsystemBase;
 
+import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
+
+import java.util.LinkedList;
+
 public abstract class WSubsystem extends SubsystemBase {
   /** put all code that reads hardware in this function */
   public abstract void read();
@@ -11,4 +15,6 @@ public abstract class WSubsystem extends SubsystemBase {
 
   /** put all code that writes to hardware in this function */
   public abstract void write();
+
+  public abstract LinkedList<TelemetryPacket> getTelemetry();
 }

@@ -17,36 +17,40 @@ import com.qualcomm.robotcore.hardware.HardwareMap;
 public class PedroConstants {
   public static FollowerConstants followerConstants =
       new FollowerConstants()
-          .mass(8.8)
-          .forwardZeroPowerAcceleration(-30.87677105808023)
-          .lateralZeroPowerAcceleration(-53.42890182464926)
-          .translationalPIDFCoefficients(new PIDFCoefficients(.06, 0.0, 0.0, 0.0))
-          .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.01))
-          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.005, 0, 0, 0, 0.051))
-          .centripetalScaling(0.005);
+          .mass(11.43)
+          .forwardZeroPowerAcceleration(-57.0250923641167)
+          .lateralZeroPowerAcceleration(-80.9344756485226)
+          .translationalPIDFCoefficients(new PIDFCoefficients(.12, 0.0, 0.0, 0.02))
+          .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.02))//.9
+          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.1, 0, 0, 0.6, 0.06))//0.005 0.051
+              .useSecondaryHeadingPIDF(true)
+              .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5,0,0,0.02))
+          .centripetalScaling(0.0005);
   public static MecanumConstants driveConstants =
       new MecanumConstants()
           .maxPower(1)
-          .rightFrontMotorName("FRM")
-          .rightRearMotorName("BRM")
-          .leftRearMotorName("BLM")
-          .leftFrontMotorName("FLM")
+          .rightFrontMotorName("frontRight")
+          .rightRearMotorName("backRight")
+          .leftRearMotorName("backLeft")
+          .leftFrontMotorName("frontLeft")
           .leftFrontMotorDirection(DcMotorSimple.Direction.REVERSE)
-          .leftRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+          .leftRearMotorDirection(DcMotorSimple.Direction.REVERSE)
           .rightFrontMotorDirection(DcMotorSimple.Direction.FORWARD)
-          .rightRearMotorDirection(DcMotorSimple.Direction.REVERSE)
-          .xVelocity(73.3870599016487)
-          .yVelocity(48.436596487450785);
+          .rightRearMotorDirection(DcMotorSimple.Direction.FORWARD)
+          .xVelocity(73.38216610405388)
+          .yVelocity(46.01475657065084)
+              .nominalVoltage(12)
+              .useVoltageCompensation(true);
 
   public static PinpointConstants localizerConstants =
       new PinpointConstants()
-          .forwardPodY(7 / 16)
-          .strafePodX(3)
-          .distanceUnit(DistanceUnit.INCH)
           .hardwareMapName("pinpoint")
+          .forwardPodY(-5.5)
+          .strafePodX(1.875)
+          .distanceUnit(DistanceUnit.INCH)
           .encoderResolution(GoBildaPinpointDriver.GoBildaOdometryPods.goBILDA_4_BAR_POD)
           .forwardEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD)
-          .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.REVERSED);
+          .strafeEncoderDirection(GoBildaPinpointDriver.EncoderDirection.FORWARD);
 
   public static PathConstraints pathConstraints = new PathConstraints(0.99, 100, 1, 1);
 

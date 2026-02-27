@@ -1,38 +1,156 @@
 package org.firstinspires.ftc.teamcode.Config;
 
 import com.bylazar.configurables.annotations.Configurable;
+import com.bylazar.configurables.annotations.Sorter;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.DcMotorSimple;
 
 public class Constants {
   //    public static class insertSubsystemName {
   // put subsystem specific constants here
   // example: public static final int MOTOR_PORT = 0;
   //    }
-  @Configurable
+@Configurable
   public static class Launcher {
-    // shared launch/feeder constants used across opmodes
-    public static final double FEED_TIME_SECONDS = 0.20;
-    public static final double INTER_SHOT_PAUSE_SECONDS = 2;
-    public static final double COOLDOWN_TIME_SECONDS = 0.25;
 
-    // PIDF / controller gains used in autos & teleop (named to match existing usages)
-    public static final double Kp = 0.01;
-    public static final double Ki = 0.5;
-    public static final double Kd = 0.0;
-    public static final double Ks = 0.0431;
+    public static final String FLYWHEEL_MOTOR_LEAD = "Flywheel1";
+    public static final String FLYWHEEL_MOTOR_FOLLOW = "Flywheel2";
 
-    // velocity targets / thresholds
-    public static final double TARGET_VELOCITY = 1000;
-    public static final double MIN_VELOCITY = 950;
+    public static final boolean FLYWHEEL_MOTOR_LEAD_INVERTED = false;
+    public static final boolean FLYWHEEL_MOTOR_FOLLOW_INVERTED = true;
 
-    // feeder servo powers
-    public static final double FEEDER_POWER = 1.0;
-    public static final double FEEDER_STOP = 0.0;
-    public static final double FEEDER_REVERSE = -0.35;
+    public static double kP = 0.025;
+    public static double kI = 0.015;
+    public static double kD = 0.0005;
+    public static double kS = 0.13;
+    public static double Kv = 0.0004065;
+    public static double spinupBoost = 0.5;  // Extra power added during spin-up for faster acceleration
+    public static double spinupThreshold = 200;  // Switch to normal control when within this velocity of target
+    public static double NOMINAL_BATTERY_VOLTAGE = 12;
+    public static double VOLTAGE_UPDATE_INTERVAL_SECONDS = 5;
 
-    // shared shot count used by autos
-    public static final int TOTAL_SHOTS = 3;
+    // Deadband to prevent oscillation when stopping (ticks per second)
+    public static final double VELOCITY_DEADBAND = 50.0;
+    public static double Detection_DeadBand =20;
 
-    // nominal battery voltage used for simple voltage compensation
-    public static final double NOMINAL_BATTERY_VOLTAGE = 12.0;
+    public static double FarVelocity = 1200;
+        public static double closeVelocity = 1225;//1350
+    public static final double intakeVelocity = -500;
+
+    public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
+
+    // Telemetry logging toggle for Launcher
+    public static boolean logTelemetry = false;
+  }
+
+  public static class Intake {
+    public static final String INTAKE_MOTOR = "Intake";
+    public static final String TRANSFER_MOTOR = "Transfer";
+
+    public static final String FEEDER_SERVO = "servo3";
+
+    public static final String intakeBeamBreak = "intakeBeamBreak";
+    public static final String transferBeamBreak = "transferBeamBreak";
+
+    public static final double intakeOverCurrent = 6;
+    public static final double transferOverCurrent = 6;
+
+    public static final DcMotorSimple.Direction INTAKE_MOTOR_DIRECTION =
+        DcMotorSimple.Direction.FORWARD;
+    public static final DcMotorSimple.Direction TRANSFER_MOTOR_DIRECTION =
+        DcMotorSimple.Direction.FORWARD;
+
+    public static final double FEEDER_SERVO_OPEN = 0.5;
+    public static final double FEEDER_SERVO_CLOSE = 0.63;
+
+    public static final double INTAKE_MOTOR_FORWARD = -1.0;
+    public static final double INTAKE_MOTOR_REVERSE = -1.0;
+    public static final double INTAKE_MOTOR_HOLD = 0;
+    public static final double INTAKE_MOTOR_HP = 0.5;
+
+    public static final double TRANSFER_MOTOR_FORWARD = -1.0;
+    public static final double TRANSFER_MOTOR_REVERSE = -1.0;
+    public static final double TRANSFER_MOTOR_HOLD = -0.35;
+    public static final double TRANSFER_MOTOR_HP = 0.5;
+
+    // Telemetry logging toggle for Intake
+    public static boolean logTelemetry = false;
+  }
+@Configurable
+  public static class Turret {
+      public static final String servoName = "servo1";
+      public static final String servoName2 = "servo2";
+      // REV Through Bore encoder connected to a DcMotorEx port
+      public static final String encoderMotorName = "Intake";
+      public static final double TICKS_PER_REV = 8192.0; // REV Through Bore encoder resolution
+
+      public static final double gearRatio = 103.0/28.0; // servo rotations per turret rotation (2:1 = servo rotates 2x)
+
+      // PID gains
+      public static double kP = 0.002;//0.005
+      public static double kI = 0.0007;//0.0001
+      public static double kD = 0.0002;//0.00001
+
+      public static double kF_left = 0.095; // Directional feedforward when turning left (positive error) .11
+      public static double kF_right = -0.095; // Directional feedforward when turning right (negative error) -.11
+      public static double kV = .007; // Velocity feedforward - scales with error to drive turret to target .018
+
+      public static  double GoalAngleBlue = -18; // degrees
+      public static final double GoalAngleRed = 18;//red
+        public static final double WRAP_THRESHOLD = 270.0;
+
+      public static boolean logTelemetry = false;
+
+
+  }
+  public static class Robot {
+      public enum motif{
+          GPP,
+          PGP,
+          PPG
+      }
+      public enum Alliance{
+          RED,
+          BLUE
+      }
+      public static motif CurrentMOTIF = motif.GPP; //defaults to green purple purple
+      public static Alliance alliance = Alliance.BLUE; //defaults to blue
+      public static final Pose BlueGoal = new Pose(6,144-6,0);
+      public static final Pose RedGoal = BlueGoal.mirror();
+      public static Pose Goal = BlueGoal;
+  }
+  public static class Vision {
+      public static final String cameraName = "limelight";
+
+      // Limelight mounting position on turret (relative to robot center when turret at 0°)
+      public static final double LIMELIGHT_X_OFFSET = 0.0; // inches forward from robot center
+      public static final double LIMELIGHT_Y_OFFSET = 0.0; // inches left from robot center
+      public static final double LIMELIGHT_HEADING_OFFSET = 270.0; // degrees offset: Limelight 0° = Pedro 270°, plus 180° for turret zero offset
+
+      // EKF Tuning parameters - measured from EKF Tuner (Pinpoint drift rates)
+      public static final double X_DRIFT_SIGMA = 0.000348; // inches/sqrt(sec)
+      public static final double Y_DRIFT_SIGMA = 0.000999; // inches/sqrt(sec)
+      public static final double HEADING_DRIFT_SIGMA = 0.000182; // rad/sqrt(sec)
+
+      // Vision measurement noise (standard deviation) - measured from MT1
+      // Original measurements in meters: 0.0019, 0.005, 0.15 rad
+      public static final double LIMELIGHT_X_STD = 0.075; // inches (0.0019m * 39.3701)
+      public static final double LIMELIGHT_Y_STD = 0.2; // inches (0.005m * 39.3701)
+      public static final double LIMELIGHT_HEADING_STD = 0.15; // radians (~8.6 degrees)
+
+      public static final double LOOP_TIME = 0.02; // 20ms = 50Hz
+
+      // Quality check thresholds
+      public static final int MIN_TAGS_FOR_CORRECTION = 1; // Minimum AprilTags needed for correction
+      public static final double MAX_TAG_DISTANCE = 120.0; // inches - reject readings from tags too far away
+
+      // Telemetry logging toggle for Vision subsystem
+      public static boolean logTelemetry = true;
+  }
+  public static class Drivetrain {
+      public static Pose Pose = new Pose(70, 70, 0);
+
+      // Telemetry logging toggle for Drivetrain
+      public static boolean logTelemetry = false;
   }
 }

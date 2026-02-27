@@ -1,0 +1,460 @@
+package org.firstinspires.ftc.teamcode.Config.Subsystems;
+
+import static org.firstinspires.ftc.teamcode.Config.Constants.Turret.*;
+import static org.firstinspires.ftc.teamcode.Config.Utils.TurretMath.*;
+
+import com.pedropathing.follower.Follower;
+import com.pedropathing.geometry.Pose;
+import com.qualcomm.robotcore.hardware.CRServo;
+import com.qualcomm.robotcore.hardware.DcMotorEx;
+import com.qualcomm.robotcore.hardware.HardwareMap;
+import com.qualcomm.robotcore.util.ElapsedTime;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+
+import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
+import org.firstinspires.ftc.teamcode.Config.Utils.TelemetryPacket;
+
+import java.util.LinkedList;
+
+
+public class Turret extends WSubsystem {
+  private CRServo servo;
+  private CRServo servo2;
+  private ThroughBoreEncoder turretEncoder;
+  private Follower follower;
+
+  // Direct PID state (matching TurretZNTuner)
+  private double lastError = 0;
+  private double integral = 0;
+  private final ElapsedTime loopTimer = new ElapsedTime();
+
+  // Configuration
+  private double targetAngle = 0;
+  private double robotRelativeTargetAngle = 0;
+  private boolean trackPinpoint = true;
+  private Pose targetPose = null; // Target pose for continuous tracking
+
+  // State
+  private double heading = 0;
+  private double filteredHeading = 0; // Low-pass filtered heading
+  private static final double HEADING_FILTER_ALPHA = 0.3; // 0 = no filtering, 1 = no smoothing
+  private double currentTurretAngle = 0;
+  private double targetServoAngle = 0;
+  private double servoError = 0;
+  private double servoPower = 0;
+
+  // Constants
+  private static final double SAFE_LIMIT = 135.0;
+  private static final double DEADBAND = 0; // ~2° turret error - stop completely
+  private static final double WAYPOINT_THRESHOLD = 35.0; // In turret space - for waypoint detection
+
+  // Wrap-around state
+  private boolean isWrapping = false;
+  private int wrapStep = 0; // 0=not wrapping, 1-3=waypoints
+  private boolean wrapGoingPositive = false; // true = going toward +135, false = going toward -135
+  private boolean justFinishedWrap = false; // Prevents immediate re-wrap after completing
+
+  // Waypoints: we always go through center
+  // Going positive (from neg to pos): -135 → -10 → +10 → +135
+  // Going negative (from pos to neg): +135 → +10 → -10 → -135
+
+  // Telemetry
+  private LinkedList<TelemetryPacket> telemetryPackets;
+  private double unwrappedServoAngle = 0;
+  private double desiredTurretAngle = 0;
+  private double safeTurretAngle = 0;
+  private double wrappedCurrentTurret = 0;
+
+
+  public Turret(HardwareMap hardwareMap, Follower follower, Launcher launcher) {
+    servo = hardwareMap.get(CRServo.class, servoName);
+    servo2 = hardwareMap.get(CRServo.class, servoName2);
+    DcMotorEx encoderMotor = hardwareMap.get(DcMotorEx.class, encoderMotorName);
+    turretEncoder = new ThroughBoreEncoder(encoderMotor, gearRatio, TICKS_PER_REV, true);
+    this.follower = follower;
+    telemetryPackets = new LinkedList<>();
+    turretEncoder.update();
+    targetServoAngle = turretEncoder.getUnwrappedEncoderAngle();
+    loopTimer.reset();
+  }
+
+  @Override
+  public void read() {
+    double rawHeading = Math.toDegrees(follower.poseTracker.getPose().getHeading());
+    // Apply low-pass filter to reduce noise-induced oscillation
+    // Handle angle wrapping for the filter
+    double headingDiff = wrap180(rawHeading - filteredHeading);
+    filteredHeading = wrap180(filteredHeading + HEADING_FILTER_ALPHA * headingDiff);
+    heading = filteredHeading;
+    turretEncoder.update();
+  }
+
+  @Override
+  public void loop() {
+    // Get current position
+    unwrappedServoAngle = turretEncoder.getUnwrappedEncoderAngle();
+    currentTurretAngle = unwrappedServoAngle / gearRatio;
+    wrappedCurrentTurret = wrap180(currentTurretAngle);
+
+    // Get desired turret angle
+    boolean usingHeadingCompensation = false;
+    if (targetPose != null) {
+      // Calculate field angle to target pose dynamically
+      Pose robotPose = follower.poseTracker.getPose();
+      double dx = targetPose.getX() - robotPose.getX();
+      double dy = targetPose.getY() - robotPose.getY();
+      // atan2(dy, dx) gives 0° = +X direction, matching Pedro heading convention
+      // Add 180° so the flywheel side (not the back) faces the target
+      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx)) + 180;
+      // Convert field angle to robot-relative: subtract robot heading
+      desiredTurretAngle = wrap180(fieldAngleToTarget - heading);
+      usingHeadingCompensation = true;
+    } else if (trackPinpoint) {
+      // Convert target field angle to robot-relative
+      desiredTurretAngle = wrap180(targetAngle - heading);
+      usingHeadingCompensation = true;
+    } else {
+      desiredTurretAngle = robotRelativeTargetAngle;
+    }
+
+    // When using heading compensation, be more careful about starting wraps
+    // But if we're already wrapping, let it complete
+    if (usingHeadingCompensation && !isWrapping) {
+      // Clear cooldown if we're now on the same side as target or near center
+      if (justFinishedWrap) {
+        boolean sameSide = (wrappedCurrentTurret > 0) == (desiredTurretAngle > 0);
+        boolean nearCenter = Math.abs(wrappedCurrentTurret) < 60.0;
+        if (sameSide || nearCenter) {
+          justFinishedWrap = false;
+        }
+      }
+
+      // Not currently wrapping - check if we NEED to wrap
+      // Don't start a new wrap if we just finished one (cooldown)
+      boolean needsWrap = !justFinishedWrap &&
+                          Math.abs(wrappedCurrentTurret) > 90.0 &&
+                          Math.abs(desiredTurretAngle) > 90.0 &&
+                          (wrappedCurrentTurret > 0) != (desiredTurretAngle > 0);
+
+      if (needsWrap) {
+        // Start wrapping even in heading compensation mode
+        isWrapping = true;
+        wrapStep = 1;
+        wrapGoingPositive = desiredTurretAngle > 0;
+        safeTurretAngle = getCurrentWaypoint();
+      } else {
+        // Clamp to safe limits
+        if (desiredTurretAngle > SAFE_LIMIT) {
+          safeTurretAngle = SAFE_LIMIT;
+        } else if (desiredTurretAngle < -SAFE_LIMIT) {
+          safeTurretAngle = -SAFE_LIMIT;
+        } else {
+          safeTurretAngle = desiredTurretAngle;
+        }
+      }
+    } else if (isWrapping) {
+      // Already wrapping - continue with wrap logic (handled below)
+      safeTurretAngle = getCurrentWaypoint();
+    } else {
+      // For robot-relative commands, use full wrap logic
+      safeTurretAngle = calculateSafeTurretAngle(wrappedCurrentTurret, desiredTurretAngle);
+    }
+
+    // Handle wrap state machine if wrapping
+    if (isWrapping) {
+      double waypoint = getCurrentWaypoint(); // Always 0 (center)
+      safeTurretAngle = waypoint;
+
+      // Check if we reached center (within threshold)
+      if (Math.abs(wrappedCurrentTurret) < WAYPOINT_THRESHOLD) {
+        // We're at center - done wrapping, now go to target
+        isWrapping = false;
+        wrapStep = 0;
+        justFinishedWrap = true; // Set cooldown to prevent immediate re-wrap
+
+        // Clamp and go to desired
+        if (desiredTurretAngle > SAFE_LIMIT) {
+          safeTurretAngle = SAFE_LIMIT;
+        } else if (desiredTurretAngle < -SAFE_LIMIT) {
+          safeTurretAngle = -SAFE_LIMIT;
+        } else {
+          safeTurretAngle = desiredTurretAngle;
+        }
+      }
+    }
+
+    // Calculate target servo angle
+    targetServoAngle = calculateServoTarget(safeTurretAngle);
+
+    // Calculate error in TURRET space (matching TurretZNTuner exactly)
+    double turretError = safeTurretAngle - wrappedCurrentTurret;
+    servoError = targetServoAngle - unwrappedServoAngle; // kept for telemetry
+
+
+    // Direct PID + kV on turret-space angles (identical to TurretZNTuner)
+    double dt = loopTimer.seconds();
+    loopTimer.reset();
+
+    double basePower;
+    double absError = Math.abs(turretError);
+
+    if (absError < DEADBAND) {
+      basePower = 0.0;
+      integral = 0;
+      lastError = 0;
+    } else {
+      integral += turretError * dt;
+      integral = clamp(integral, -100, 100); // Anti-windup
+
+      double derivative = (dt > 0.001) ? (turretError - lastError) / dt : 0.0;
+      lastError = turretError;
+
+      double pTerm = kP * turretError;
+      double iTerm = kI * integral;
+      double dTerm = kD * derivative;
+      double vTerm = kV * turretError;
+
+      // Directional feedforward
+      double feedforward = 0;
+      if (turretError > 0) {
+        feedforward = kF_left;
+      } else if (turretError < 0) {
+        feedforward = kF_right;
+      }
+
+      basePower = pTerm + iTerm + dTerm + vTerm + feedforward;
+      basePower = clamp(basePower, -1.0, 1.0);
+    }
+
+
+    servoPower = clamp(basePower, -1.0, 1.0);
+
+    // Telemetry
+    if (logTelemetry) {
+      telemetryPackets.clear();
+
+      String status;
+      if (isWrapping) {
+        status = "WRAPPING";
+      } else if (absError < DEADBAND) {
+        status = "AT TARGET";
+      } else {
+        status = "MOVING";
+      }
+
+      telemetryPackets.addLast(new TelemetryPacket("=== STATUS ===", status));
+      telemetryPackets.addLast(new TelemetryPacket("Wrapped Turret", wrappedCurrentTurret));
+      telemetryPackets.addLast(new TelemetryPacket("Desired Turret", desiredTurretAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Safe Turret", safeTurretAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Servo Error", servoError));
+      telemetryPackets.addLast(new TelemetryPacket("Servo Power", servoPower));
+      telemetryPackets.addLast(new TelemetryPacket("Is Wrapping", isWrapping));
+      telemetryPackets.addLast(new TelemetryPacket("Wrap Step", wrapStep));
+      telemetryPackets.addLast(new TelemetryPacket("Wrap Direction", wrapGoingPositive ? "→ +135" : "→ -135"));
+      telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
+      telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
+
+      // Tracking debug info
+      if (targetPose != null) {
+        Pose rp = follower.poseTracker.getPose();
+        double ddx = targetPose.getX() - rp.getX();
+        double ddy = targetPose.getY() - rp.getY();
+        telemetryPackets.addLast(new TelemetryPacket("Robot X", rp.getX()));
+        telemetryPackets.addLast(new TelemetryPacket("Robot Y", rp.getY()));
+        telemetryPackets.addLast(new TelemetryPacket("Target X", targetPose.getX()));
+        telemetryPackets.addLast(new TelemetryPacket("Target Y", targetPose.getY()));
+        telemetryPackets.addLast(new TelemetryPacket("dx", ddx));
+        telemetryPackets.addLast(new TelemetryPacket("dy", ddy));
+        telemetryPackets.addLast(new TelemetryPacket("fieldAngle", Math.toDegrees(Math.atan2(ddy, ddx)) + 180));
+        telemetryPackets.addLast(new TelemetryPacket("Raw Pedro Heading(rad)", rp.getHeading()));
+      }
+    }
+  }
+
+  /**
+   * Calculate the safe turret angle, handling wrap-around logic
+   *
+   * RULES:
+   * 1. If we can go direct (not crossing forbidden zone), do it
+   * 2. If we need to cross through ±180° (forbidden), go through center first
+   * 3. Always clamp final result to ±SAFE_LIMIT
+   */
+  private double calculateSafeTurretAngle(double current, double desired) {
+    // Clamp desired to safe limits first
+    double clampedDesired = desired;
+    if (desired > SAFE_LIMIT) {
+      clampedDesired = SAFE_LIMIT;
+    } else if (desired < -SAFE_LIMIT) {
+      clampedDesired = -SAFE_LIMIT;
+    }
+
+    // If already wrapping, continue with waypoints
+    if (isWrapping) {
+      return getCurrentWaypoint();
+    }
+
+    // Check if we're currently in the danger zone (close to ±180)
+    // If so, move toward safe limit first
+    if (Math.abs(current) > SAFE_LIMIT) {
+      return current > 0 ? SAFE_LIMIT : -SAFE_LIMIT;
+    }
+
+    // If either is near center (within ±90°), we can go direct
+    if (Math.abs(current) <= 90.0 || Math.abs(clampedDesired) <= 90.0) {
+      return clampedDesired;
+    }
+
+    // Both are far from center (>90°)
+    boolean currentPositive = current > 0;
+    boolean desiredPositive = clampedDesired > 0;
+
+    // If same side, go direct
+    if (currentPositive == desiredPositive) {
+      return clampedDesired;
+    }
+
+    // Opposite sides AND both far from center - need to wrap through center
+    // Start wrapping sequence
+    isWrapping = true;
+    wrapStep = 1;
+    wrapGoingPositive = desiredPositive;
+
+    return getCurrentWaypoint();
+  }
+
+
+
+
+  /**
+   * Get the current waypoint for wrap sequence
+   * Simplified 2-step: just go to center (0°), then to target
+   */
+  private double getCurrentWaypoint() {
+    if (!isWrapping || wrapStep < 1 || wrapStep > 2) {
+      return 0.0;
+    }
+
+    // Step 1: Go to center
+    // Step 2: Done - handled by wrap completion logic
+    return 0.0; // Always go to center first
+  }
+
+  /**
+   * Calculate the servo target for a given turret angle
+   */
+  private double calculateServoTarget(double turretTarget) {
+    double targetTurretServo = turretTarget * gearRatio;
+
+    // Find which 720° wrap we're in
+    double servoPerTurretRotation = 360.0 * gearRatio;
+    int turretWrap = (int) Math.round(unwrappedServoAngle / servoPerTurretRotation);
+
+    // Calculate candidates
+    double candidate1 = targetTurretServo + (turretWrap * servoPerTurretRotation);
+    double candidate2 = targetTurretServo + ((turretWrap - 1) * servoPerTurretRotation);
+    double candidate3 = targetTurretServo + ((turretWrap + 1) * servoPerTurretRotation);
+
+    // Pick closest
+    double dist1 = Math.abs(candidate1 - unwrappedServoAngle);
+    double dist2 = Math.abs(candidate2 - unwrappedServoAngle);
+    double dist3 = Math.abs(candidate3 - unwrappedServoAngle);
+
+    if (dist1 <= dist2 && dist1 <= dist3) {
+      return candidate1;
+    } else if (dist2 <= dist3) {
+      return candidate2;
+    } else {
+      return candidate3;
+    }
+  }
+
+  @Override
+  public void write() {
+    servo.setPower(servoPower);
+    servo2.setPower(servoPower);
+  }
+
+  public void setTargetAngle(double angle) {
+    this.targetAngle = angle;
+    this.robotRelativeTargetAngle = wrap180(angle - heading);
+    this.trackPinpoint = false;
+    this.targetPose = null; // Clear target pose tracking
+    this.isWrapping = false;
+    this.wrapStep = 0;
+  }
+
+  public void faceTarget(Pose targetPose, Pose robotPose) {
+    // Store the target pose for continuous tracking
+    // The loop() will calculate the angle to this pose every cycle
+    this.targetPose = targetPose;
+//    this.targetPose = new Pose(targetPose.getX(),targetPose.getY(), targetPose.getHeading() + Math.toRadians(180));
+    this.trackPinpoint = false; // Not using fixed field angle
+    this.isWrapping = false;
+    this.wrapStep = 0;
+  }
+
+  /**
+   * Set a target pose to continuously track
+   * The turret will automatically calculate the angle to this pose as the robot moves
+   * @param targetPose The pose to point at
+   */
+  public void setTargetPose(Pose targetPose) {
+    this.targetPose = targetPose;
+    this.trackPinpoint = false;
+    this.isWrapping = false;
+    this.wrapStep = 0;
+  }
+
+  /**
+   * Clear the target pose and stop tracking
+   */
+  public void clearTargetPose() {
+    this.targetPose = null;
+  }
+
+  public void enablePinpointTracking() {
+    this.trackPinpoint = true;
+  }
+
+  public void disablePinpointTracking() {
+    this.trackPinpoint = false;
+  }
+
+  public boolean isPinpointTrackingEnabled() {
+    return trackPinpoint;
+  }
+
+  @Override
+  public LinkedList<TelemetryPacket> getTelemetry() {
+    return telemetryPackets;
+  }
+
+  public InstantCommand TargetAngle(double Angle) {
+    return new InstantCommand(() -> setTargetAngle(Angle));
+  }
+
+  public InstantCommand TargetBlueGoal() {
+    return new InstantCommand(() -> setTargetPose(org.firstinspires.ftc.teamcode.Config.Constants.Robot.BlueGoal));
+  }
+
+  public InstantCommand TargetRedGoal() {
+    return new InstantCommand(() -> setTargetPose(org.firstinspires.ftc.teamcode.Config.Constants.Robot.RedGoal));
+  }
+
+  public InstantCommand StopTracking() {
+    return new InstantCommand(() -> clearTargetPose());
+  }
+
+  public double getCurrentTurretAngle() {
+    return currentTurretAngle;
+  }
+
+  /**
+   * Returns true if the desired turret angle exceeds the ±135° safe limit
+   * and is being clamped. Useful for triggering controller rumble.
+   */
+  public boolean isTargetClamped() {
+    return Math.abs(desiredTurretAngle) > SAFE_LIMIT && !isWrapping;
+  }
+}

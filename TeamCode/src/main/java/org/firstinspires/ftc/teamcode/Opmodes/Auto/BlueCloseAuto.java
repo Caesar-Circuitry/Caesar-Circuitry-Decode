@@ -1,259 +1,124 @@
-// java
 package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
-import java.util.List;
+import com.bylazar.telemetry.JoinedTelemetry;
+import com.bylazar.telemetry.PanelsTelemetry;
+import com.seattlesolvers.solverslib.command.CommandOpMode;
+import com.seattlesolvers.solverslib.command.InstantCommand;
+import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
+import com.seattlesolvers.solverslib.command.RunCommand;
+import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
+import com.seattlesolvers.solverslib.command.WaitCommand;
+import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 
+import org.firstinspires.ftc.teamcode.Config.Commands.LaunchWhenReady;
 import org.firstinspires.ftc.teamcode.Config.Constants;
-import org.firstinspires.ftc.teamcode.Config.pedroPathing.PedroConstants;
+import org.firstinspires.ftc.teamcode.Config.paths.BlueStartFromClose;
+import org.firstinspires.ftc.teamcode.Config.robot;
 
-import com.pedropathing.follower.Follower;
-import com.pedropathing.geometry.BezierLine;
-import com.pedropathing.geometry.Pose;
-import com.pedropathing.paths.Path;
-import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
-import com.qualcomm.robotcore.eventloop.opmode.OpMode;
-import com.qualcomm.robotcore.hardware.CRServo;
-import com.qualcomm.robotcore.hardware.DcMotor;
-import com.qualcomm.robotcore.hardware.DcMotorEx;
-import com.qualcomm.robotcore.hardware.DcMotorSimple;
-import com.qualcomm.robotcore.hardware.VoltageSensor;
-import com.qualcomm.robotcore.util.ElapsedTime;
-import com.seattlesolvers.solverslib.controller.PIDFController;
-import com.seattlesolvers.solverslib.util.MathUtils;
+public class BlueCloseAuto extends CommandOpMode {
+    private robot robot;
+    private JoinedTelemetry Telemetry;
+    private BlueStartFromClose paths;
+    private long LaunchTime = 250;
+    private long waitRampTime = 100;
 
-@Autonomous(name = "BlueCloseAuto")
-public class BlueCloseAuto extends OpMode {
-  private Follower follower;
-  // Use ElapsedTime for simple timer operations to match FTC API
-  private ElapsedTime pathTimer, opmodeTimer, interShotTimer;
-  private int pathState;
+    @Override
+    public void initialize() {
+        super.reset();
+        waitForStart();
+        Telemetry = new JoinedTelemetry(PanelsTelemetry.INSTANCE.getFtcTelemetry(), telemetry);
+        robot = new robot(hardwareMap,Telemetry);
+        paths = new BlueStartFromClose(robot.getHardware().getFollower());
+        robot.getHardware().getFollower().setStartingPose(BlueStartFromClose.START_POSE);
+        schedule(
+                new RunCommand(this.robot::read),
+                new RunCommand(this.robot::loop),
+                new RunCommand(this.robot::write),
+                new SequentialCommandGroup(
+                        // ==================== LAUNCH 0 (Preload) ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch0().endPose(), Constants.Robot.Goal)),
+//                        robot.getHardware().getTurret().TargetBlueGoal(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch0()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime),
 
-  // Values taken from Config/paths/BlueSideClose.pp
-  private final Pose startPose = new Pose(63.692, 135.771, Math.toRadians(90));
-  private final Pose scorePose = new Pose(26, 126, Math.toRadians(90));
+                        // ==================== INTAKE ARTIFACT 0 ====================
+                        robot.getHardware().getIntake().GroundIntake(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeArtifact0()),
+                        robot.getHardware().getIntake().Hold(),
 
-  // path to run after all shots are fired
-  private Path postShotPath;
+                        // ==================== LAUNCH 1 ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch1().endPose(), Constants.Robot.Goal)),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch1()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime),
 
-  // Launcher hardware and shooting state
-  private DcMotorEx launcher;
-  private CRServo leftFeeder, rightFeeder;
-  private ElapsedTime feederTimer;
-  private int shotsFired = 0;
+                        // ==================== INTAKE ARTIFACT 1 ====================
+                        robot.getHardware().getIntake().GroundIntake(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeArtifact1()),
+                        robot.getHardware().getIntake().Hold(),
 
-  // LAUNCHER_OPEN_LOOP_POWER remains here as it's specific to this opmode
-  private static final double LAUNCHER_OPEN_LOOP_POWER = 0.85; // open-loop spin power (fallback)
+                        // ==================== LAUNCH 2 ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch2().endPose(), Constants.Robot.Goal)),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch2()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime),
 
-  // PIDF-based launcher control (ported from StarterBotTeleopMecanums)
-  private PIDFController launchController;
-  // PID values taken from constants
-  private double actualVelocity = 0;
-  private double LAUNCHER_DESIRED_VELOCITY = 0;
+                        // ==================== RAMP CYCLE 0 ====================
+                        robot.getHardware().getIntake().Hold(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRamp0()),
+                        new ParallelCommandGroup(
+                                new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeRamp0()),
+                                new SequentialCommandGroup(new WaitCommand(waitRampTime), robot.getHardware().getIntake().GroundIntake())
+                        ),
+                        robot.getHardware().getIntake().Hold(),
 
-  // Battery voltage compensation
-  private List<VoltageSensor> voltageSensors;
-  private double batteryVoltage = Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
-  private ElapsedTime voltageTimer;
+                        // ==================== LAUNCH 3 ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch3().endPose(), Constants.Robot.Goal)),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch3()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime),
 
-  public void buildPaths() {
-    postShotPath = new Path(new BezierLine(new Pose(26.000, 126.000), new Pose(62.000, 131.000)));
-    postShotPath.setLinearHeadingInterpolation(Math.toRadians(146), Math.toRadians(270));
-  }
+                        // ==================== RAMP CYCLE 1 ====================
+                        robot.getHardware().getIntake().Hold(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRamp1()),
+                        new ParallelCommandGroup(
+                                new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeRamp1()),
+                                new SequentialCommandGroup(new WaitCommand(waitRampTime), robot.getHardware().getIntake().GroundIntake())
+                        ),
+                        robot.getHardware().getIntake().Hold(),
 
-  public void autonomousPathUpdate() {
-    switch (pathState) {
-      case 0:
-        setPathState(1);
-        break;
-      case 1:
-        // Wait until follower completes, then begin shooting routine
-        if (!follower.isBusy()) {
-          setPathState(2); // begin spin-up
-        }
-        break;
-      case 2:
-        // Spin up launcher using closed-loop PIDF to the desired velocity
-        LAUNCHER_DESIRED_VELOCITY = Constants.Launcher.TARGET_VELOCITY;
-        // Feed immediately once the launcher reports being at-or-above the minimum velocity
-        if (launcher != null
-            && Math.abs(launcher.getVelocity()) >= Constants.Launcher.MIN_VELOCITY) {
-          feederTimer.reset();
-          leftFeeder.setPower(Constants.Launcher.FEEDER_POWER);
-          rightFeeder.setPower(Constants.Launcher.FEEDER_POWER);
-          setPathState(3);
-        }
-        break;
-      case 3:
-        // Feeding - run feeders for FEED_TIME_SECONDS, then stop and count a shot
-        if (feederTimer.seconds() >= Constants.Launcher.FEED_TIME_SECONDS) {
-          leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-          rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-          shotsFired++;
-          if (shotsFired >= Constants.Launcher.TOTAL_SHOTS) {
-            // done shooting
-            LAUNCHER_DESIRED_VELOCITY = 0;
-            if (launcher != null) launcher.setPower(0);
-            // start the requested path after all shots are fired
-            if (postShotPath != null && follower != null) {
-              follower.followPath(postShotPath);
-            }
-            setPathState(4);
-          } else {
-            // start inter-shot pause to allow flywheel to spin up again before next feed
-            if (interShotTimer != null) interShotTimer.reset();
-            setPathState(5);
-          }
-        }
-        break;
-      case 4:
-        // post-shot: either waiting for the postShotPath to finish or idle if none
-        // (no action required here; follower.isBusy() will be false once complete)
-        break;
-      case 5:
-        // Inter-shot pause: wait for configured seconds before trying to spin-up and feed again
-        if (interShotTimer != null
-            && interShotTimer.seconds() >= Constants.Launcher.INTER_SHOT_PAUSE_SECONDS) {
-          setPathState(2); // go back to spin-up (closed-loop) and then feed when ready
-        }
-        break;
-      default:
-        break;
+                        // ==================== LAUNCH 4 ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch4().endPose(), Constants.Robot.Goal)),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch4()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime),
+
+                        // ==================== RAMP CYCLE 2 ====================
+                        robot.getHardware().getIntake().Hold(),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRamp2()),
+                        new ParallelCommandGroup(
+                                new FollowPathCommand(robot.getHardware().getFollower(), paths.intakeRamp2()),
+                                new SequentialCommandGroup(new WaitCommand(waitRampTime), robot.getHardware().getIntake().GroundIntake())
+                        ),
+                        robot.getHardware().getIntake().Hold(),
+
+                        // ==================== LAUNCH 5 (Final) ====================
+                        new InstantCommand(()->robot.getHardware().getLauncher().LaunchPose(paths.moveToLaunch5().endPose(), Constants.Robot.Goal)),
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToLaunch5()),
+                        new LaunchWhenReady(robot.getHardware().getIntake(),robot.getHardware().getLauncher()),
+                        new WaitCommand(LaunchTime)
+                )
+
+        );
     }
-  }
-
-  /**
-   * These change the states of the paths and actions. It will also reset the timers of the
-   * individual switches *
-   */
-  public void setPathState(int pState) {
-    pathState = pState;
-    if (pathTimer != null) pathTimer.reset();
-  }
-
-  /** This is the main loop of the OpMode, it will run repeatedly after clicking "Play". * */
-  @Override
-  public void loop() {
-
-    // These loop the movements of the robot, these must be called continuously in order to work
-    if (follower != null) follower.update();
-    autonomousPathUpdate();
-
-    // Update battery voltage periodically (small overhead)
-    if (voltageTimer != null && voltageTimer.seconds() >= 1.0) {
-      batteryVoltage = getBatteryVoltage();
-      voltageTimer.reset();
+    @Override
+    public void run(){
+        super.run();
     }
 
-    // Closed-loop launcher velocity control (if controller present)
-    if (launcher != null && launchController != null) {
-      actualVelocity = launcher.getVelocity();
-      if (!(LAUNCHER_DESIRED_VELOCITY == 0)) {
-        double power =
-            (MathUtils.clamp(
-                        (launchController.calculate(actualVelocity, LAUNCHER_DESIRED_VELOCITY)
-                            + Constants.Launcher.Ks),
-                        -1,
-                        1)
-                    * Constants.Launcher.NOMINAL_BATTERY_VOLTAGE)
-                / batteryVoltage;
-        launcher.setPower(power);
-      } else {
-        launcher.setPower(0);
-      }
+    @Override
+    public void end(){
+        Constants.Drivetrain.Pose = robot.getHardware().getFollower().getPose();
     }
-
-    // Feedback to Driver Hub for debugging
-    telemetry.addData("path state", pathState);
-    if (follower != null && follower.getPose() != null) {
-      telemetry.addData("x", follower.getPose().getX());
-      telemetry.addData("y", follower.getPose().getY());
-      telemetry.addData("heading", follower.getPose().getHeading());
-    }
-    if (launcher != null) telemetry.addData("launcherVel", launcher.getVelocity());
-    telemetry.addData("shotsFired", shotsFired);
-    telemetry.addData("launcherDesired", LAUNCHER_DESIRED_VELOCITY);
-    telemetry.addData("batteryV", batteryVoltage);
-    telemetry.update();
-  }
-
-  /** This is the method called once at the init of the OpMode. * */
-  @Override
-  public void init() {
-    pathTimer = new ElapsedTime();
-    opmodeTimer = new ElapsedTime();
-    interShotTimer = new ElapsedTime();
-    feederTimer = new ElapsedTime();
-    voltageTimer = new ElapsedTime();
-    opmodeTimer.reset();
-
-    follower = PedroConstants.createFollower(hardwareMap);
-    buildPaths();
-    follower.setStartingPose(startPose);
-
-    // Map launcher hardware (use same names as TeleOp)
-    try {
-      launcher = hardwareMap.get(DcMotorEx.class, "launcher");
-      leftFeeder = hardwareMap.get(CRServo.class, "left_feeder");
-      rightFeeder = hardwareMap.get(CRServo.class, "right_feeder");
-
-      // configure launcher encoder mode and zero power behavior
-      launcher.setMode(DcMotor.RunMode.STOP_AND_RESET_ENCODER);
-      launcher.setMode(DcMotor.RunMode.RUN_WITHOUT_ENCODER);
-      launcher.setZeroPowerBehavior(DcMotor.ZeroPowerBehavior.BRAKE);
-
-      // feeders initial state
-      leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-      rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-      leftFeeder.setDirection(DcMotorSimple.Direction.REVERSE);
-
-      // initialize PIDF controller and voltage sensors for closed-loop control
-      launchController =
-          new PIDFController(
-              Constants.Launcher.Kp, Constants.Launcher.Ki, Constants.Launcher.Kd, 0);
-      voltageSensors = hardwareMap.getAll(VoltageSensor.class);
-      batteryVoltage = getBatteryVoltage();
-    } catch (Exception e) {
-      telemetry.addData("Launcher init error", e.getMessage());
-    }
-
-    // reset shot counter
-    shotsFired = 0;
-    pathState = -1; // don't start until play
-  }
-
-  /** This method is called continuously after Init while waiting for "play". * */
-  @Override
-  public void init_loop() {}
-
-  /**
-   * This method is called once at the start of the OpMode. It runs all the setup actions, including
-   * building paths and starting the path system *
-   */
-  @Override
-  public void start() {
-    opmodeTimer.reset();
-    // begin autonomous path + shoot sequence
-    setPathState(0);
-  }
-
-  /** We do not use this because everything should automatically disable * */
-  @Override
-  public void stop() {
-    if (launcher != null) launcher.setPower(0);
-    if (leftFeeder != null) leftFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-    if (rightFeeder != null) rightFeeder.setPower(Constants.Launcher.FEEDER_STOP);
-  }
-
-  // Helper: read battery voltage (copied from TeleOp helper)
-  private double getBatteryVoltage() {
-    if (voltageSensors == null || voltageSensors.isEmpty())
-      return Constants.Launcher.NOMINAL_BATTERY_VOLTAGE;
-    double minV = Double.POSITIVE_INFINITY;
-    for (VoltageSensor vs : voltageSensors) {
-      double v = vs.getVoltage();
-      if (v <= 0) continue; // ignore invalid readings
-      if (v < minV) minV = v;
-    }
-    return (minV == Double.POSITIVE_INFINITY) ? Constants.Launcher.NOMINAL_BATTERY_VOLTAGE : minV;
-  }
 }
