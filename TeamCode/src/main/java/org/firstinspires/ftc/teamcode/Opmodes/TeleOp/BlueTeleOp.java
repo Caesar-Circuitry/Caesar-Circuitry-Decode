@@ -7,6 +7,7 @@ import com.pedropathing.geometry.Pose;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 
+import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.robot;
 @com.qualcomm.robotcore.eventloop.opmode.TeleOp
@@ -27,12 +28,12 @@ public class BlueTeleOp extends CommandOpMode {
         this.robot.getHardware().getFollower().setPose(new Pose(8, 9.25, Math.toRadians(-90)).mirror());
 
         // Attempt to set initial pose   from vision (MT1)
-        if (robot.getHardware().getVision().setInitialPoseFromVision()) {
-            Telemetry.addLine("Initial pose set from vision");
-        } else {
-            Telemetry.addLine("Vision unavailable - using default pose");
-        }
-        Telemetry.update();
+//        if (robot.getHardware().getVision().setInitialPoseFromVision()) {
+//            Telemetry.addLine("Initial pose set from vision");
+//        } else {
+//            Telemetry.addLine("Vision unavailable - using default pose");
+//        }
+//        Telemetry.update();
 
         schedule(
                 new RunCommand(this.robot::read),

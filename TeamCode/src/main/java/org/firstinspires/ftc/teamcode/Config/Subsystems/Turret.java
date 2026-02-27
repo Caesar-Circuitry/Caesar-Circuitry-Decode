@@ -103,8 +103,9 @@ public class Turret extends WSubsystem {
       Pose robotPose = follower.poseTracker.getPose();
       double dx = targetPose.getX() - robotPose.getX();
       double dy = targetPose.getY() - robotPose.getY();
-      // Pedro uses heading 0 = +Y direction, so use atan2(dx, dy) to match
-      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dx, dy));
+      // atan2(dy, dx) gives 0° = +X direction, matching Pedro heading convention
+      // Add 180° so the flywheel side (not the back) faces the target
+      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx)) + 180;
       // Convert field angle to robot-relative: subtract robot heading
       desiredTurretAngle = wrap180(fieldAngleToTarget - heading);
       usingHeadingCompensation = true;
@@ -253,6 +254,21 @@ public class Turret extends WSubsystem {
       telemetryPackets.addLast(new TelemetryPacket("Unwrapped Servo", unwrappedServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Target Servo", targetServoAngle));
       telemetryPackets.addLast(new TelemetryPacket("Heading", heading));
+
+      // Tracking debug info
+      if (targetPose != null) {
+        Pose rp = follower.poseTracker.getPose();
+        double ddx = targetPose.getX() - rp.getX();
+        double ddy = targetPose.getY() - rp.getY();
+        telemetryPackets.addLast(new TelemetryPacket("Robot X", rp.getX()));
+        telemetryPackets.addLast(new TelemetryPacket("Robot Y", rp.getY()));
+        telemetryPackets.addLast(new TelemetryPacket("Target X", targetPose.getX()));
+        telemetryPackets.addLast(new TelemetryPacket("Target Y", targetPose.getY()));
+        telemetryPackets.addLast(new TelemetryPacket("dx", ddx));
+        telemetryPackets.addLast(new TelemetryPacket("dy", ddy));
+        telemetryPackets.addLast(new TelemetryPacket("fieldAngle", Math.toDegrees(Math.atan2(ddy, ddx)) + 180));
+        telemetryPackets.addLast(new TelemetryPacket("Raw Pedro Heading(rad)", rp.getHeading()));
+      }
     }
   }
 
@@ -372,6 +388,7 @@ public class Turret extends WSubsystem {
     // Store the target pose for continuous tracking
     // The loop() will calculate the angle to this pose every cycle
     this.targetPose = targetPose;
+//    this.targetPose = new Pose(targetPose.getX(),targetPose.getY(), targetPose.getHeading() + Math.toRadians(180));
     this.trackPinpoint = false; // Not using fixed field angle
     this.isWrapping = false;
     this.wrapStep = 0;

@@ -54,13 +54,20 @@ public class Launcher extends WSubsystem {
     flywheelLead = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_LEAD);
     flywheelFollow = hardwareMap.get(DcMotorEx.class, Constants.Launcher.FLYWHEEL_MOTOR_FOLLOW);
 
-    flywheelSpeeds.add(18,1000);
-    flywheelSpeeds.add(49,1100);
-    flywheelSpeeds.add(57,1150);
-    flywheelSpeeds.add(63,1200);
-    flywheelSpeeds.add(73,1250);
-    flywheelSpeeds.add(76,1275);
-    flywheelSpeeds.add(114,1500);
+//    flywheelSpeeds.add(18,1000);
+//    flywheelSpeeds.add(49,1100);
+//    flywheelSpeeds.add(57,1150);
+//    flywheelSpeeds.add(63,1200);
+//    flywheelSpeeds.add(73,1250);
+//    flywheelSpeeds.add(76,1275);
+//    flywheelSpeeds.add(114,1500);
+    flywheelSpeeds.add(18,900);
+    flywheelSpeeds.add(49,1000);
+    flywheelSpeeds.add(57,1050);
+    flywheelSpeeds.add(63,1100);
+    flywheelSpeeds.add(73,1150);
+    flywheelSpeeds.add(76,1175);
+    flywheelSpeeds.add(114,1400);
     flywheelSpeeds.createLUT();
 
     // Set motor directions

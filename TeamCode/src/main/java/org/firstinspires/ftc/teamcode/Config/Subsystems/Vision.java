@@ -82,8 +82,8 @@ public class Vision extends WSubsystem {
         // Turret angle for telemetry and camera-to-robot transform
         double turretAngleRad = Math.toRadians(turret.getCurrentTurretAngle());
         double cameraHeading = robotHeading + turretAngleRad;
-        // NOTE: Do NOT call updateRobotOrientation - MT2 doesn't work with turret-mounted cameras.
-        // MT2 assumes the camera is rigidly mounted to the robot, which is wrong for a turret.
+        // Feed camera's actual field heading for MT2 (Limelight treats this as "robot" heading)
+        limelight.updateRobotOrientation(Math.toDegrees(cameraHeading));
 
         // Predict step - runs every loop (only increases uncertainty)
         xDriftFilter.predict();
@@ -93,12 +93,23 @@ public class Vision extends WSubsystem {
         Double visionX = null, visionY = null, visionHeading = null;
         Double correctedX = null, correctedY = null, correctedHeading = null;
         boolean visionUsed = false;
+        boolean usingMT2 = false;
         int numTagsDetected = 0;
 
         if (results != null && results.isValid()) {
-            // Use MT1 only - MT2 doesn't work with turret-mounted cameras because
-            // it assumes the camera is rigidly mounted to the robot
-            Pose3D botPose = results.getBotpose();
+            // Try MT2 first (heading-constrained, more accurate with good heading input).
+            // Feed camera heading via updateRobotOrientation so Limelight constrains to that.
+            // Fall back to MT1 if MT2 returns null or out-of-bounds data.
+            Pose3D botPose = results.getBotpose_MT2();
+            usingMT2 = true;
+
+            // Validate MT2 result - reject if null or clearly outside field bounds
+            if (botPose == null ||
+                Math.abs(botPose.getPosition().x) > 2.5 ||
+                Math.abs(botPose.getPosition().y) > 2.5) {
+                botPose = results.getBotpose();
+                usingMT2 = false;
+            }
 
             List<LLResultTypes.FiducialResult> fiducials = results.getFiducialResults();
             numTagsDetected = fiducials != null ? fiducials.size() : 0;
@@ -175,6 +186,7 @@ public class Vision extends WSubsystem {
             telemetryPackets.clear();
             telemetryPackets.add(new TelemetryPacket("PoseCorrectionEnabled", enablePoseCorrection));
             telemetryPackets.add(new TelemetryPacket("Vision Used This Cycle", visionUsed));
+            telemetryPackets.add(new TelemetryPacket("Using MT2", usingMT2));
             telemetryPackets.add(new TelemetryPacket("Odo X (FTC)", odometryPose.getX()));
             telemetryPackets.add(new TelemetryPacket("Odo Y (FTC)", odometryPose.getY()));
             telemetryPackets.add(new TelemetryPacket("Odo Heading(rad)", robotHeading));
@@ -183,10 +195,17 @@ public class Vision extends WSubsystem {
             telemetryPackets.add(new TelemetryPacket("Vision Valid", results != null && results.isValid()));
             telemetryPackets.add(new TelemetryPacket("Results Null", results == null));
             if (results != null && results.isValid()) {
+                Pose3D mt2Pose = results.getBotpose_MT2();
                 Pose3D mt1Pose = results.getBotpose();
+                telemetryPackets.add(new TelemetryPacket("MT2 Null", mt2Pose == null));
                 telemetryPackets.add(new TelemetryPacket("MT1 Null", mt1Pose == null));
                 List<LLResultTypes.FiducialResult> fiducials = results.getFiducialResults();
                 telemetryPackets.add(new TelemetryPacket("Tags Detected", fiducials != null ? fiducials.size() : 0));
+                if (mt2Pose != null) {
+                    telemetryPackets.add(new TelemetryPacket("MT2 X (m)", mt2Pose.getPosition().x));
+                    telemetryPackets.add(new TelemetryPacket("MT2 Y (m)", mt2Pose.getPosition().y));
+                    telemetryPackets.add(new TelemetryPacket("MT2 Heading(deg)", mt2Pose.getOrientation().getYaw()));
+                }
                 if (mt1Pose != null) {
                     telemetryPackets.add(new TelemetryPacket("MT1 X (m)", mt1Pose.getPosition().x));
                     telemetryPackets.add(new TelemetryPacket("MT1 Y (m)", mt1Pose.getPosition().y));
@@ -279,7 +298,8 @@ public class Vision extends WSubsystem {
 
     public double getRangeFromTag() {
         if (results != null && results.isValid()) {
-            Pose3D botPose = results.getBotpose();
+            Pose3D botPose = results.getBotpose_MT2();
+            if (botPose == null) botPose = results.getBotpose();
             if (botPose != null) {
                 return Math.sqrt(
                         Math.pow(botPose.getPosition().x, 2) +
@@ -333,8 +353,7 @@ public class Vision extends WSubsystem {
     }
 
     /**
-     * Set the robot's initial pose using MT1 vision.
-     * MT1 only - MT2 is incompatible with turret-mounted cameras.
+     * Set the robot's initial pose using vision (MT2 preferred, MT1 fallback).
      * All math in FTC coordinates, converts to Pedro when setting follower pose.
      * @return true if pose was successfully set
      */
@@ -342,7 +361,12 @@ public class Vision extends WSubsystem {
         read();
 
         if (results != null && results.isValid()) {
-            Pose3D botPose = results.getBotpose();
+            Pose3D botPose = results.getBotpose_MT2();
+            if (botPose == null ||
+                Math.abs(botPose.getPosition().x) > 2.5 ||
+                Math.abs(botPose.getPosition().y) > 2.5) {
+                botPose = results.getBotpose();
+            }
             if (botPose != null) {
                 Pose cameraPose = getCameraPoseFromLimelight(botPose);
                 if (cameraPose != null) {
@@ -373,7 +397,8 @@ public class Vision extends WSubsystem {
      */
     public double[] getVisionPose() {
         if (results != null && results.isValid()) {
-            Pose3D botPose = results.getBotpose();
+            Pose3D botPose = results.getBotpose_MT2();
+            if (botPose == null) botPose = results.getBotpose();
             if (botPose != null) {
                 Pose cameraPose = getCameraPoseFromLimelight(botPose);
                 if (cameraPose != null) {

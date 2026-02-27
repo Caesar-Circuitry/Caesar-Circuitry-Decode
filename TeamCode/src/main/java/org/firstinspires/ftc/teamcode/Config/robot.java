@@ -43,6 +43,7 @@
      TriggerReader LeftTrigger; // Launch Close
      Trigger Right;
      Trigger Left;
+     TriggerReader RightOPReader;
      Trigger RightOP;
 
   // the constructor with a specified opmode type
@@ -117,7 +118,8 @@
     Left = new Trigger(()->LeftTrigger.isDown());
     dpadDown = new GamepadButton(driver, GamepadKeys.Button.DPAD_DOWN);
     dpadUp = new GamepadButton(driver, GamepadKeys.Button.DPAD_UP);
-    RightOP = new Trigger(()->RightTrigger.isDown());
+    RightOPReader = new TriggerReader(operator, GamepadKeys.Trigger.RIGHT_TRIGGER);
+    RightOP = new Trigger(()->RightOPReader.isDown());
   }
 
   private void driverTriggerCommands() {
@@ -126,11 +128,11 @@
       LeftBumper.whenReleased(hardware.getIntake().Hold());
       RightBumper.whileHeld(hardware.getIntake().GroundIntake());
       LeftBumper.whileHeld(hardware.getIntake().HP_Intaking());
-//      Right.whenInactive(hardware.getLauncher().stopPower());
+      Right.whenInactive(hardware.getLauncher().stopPower());
 //      Left.whenInactive(hardware.getLauncher().stopPower());
 //      Left.whenActive(hardware.getLauncher().LaunchFar());
 //      Right.whenActive(hardware.getLauncher().LaunchFar());
-//      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
+      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
       Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
@@ -138,9 +140,9 @@
       Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
 
       //OPERATOR
-
       RightOP.whenInactive(hardware.getLauncher().stopPower());
-      RightOP.whenActive(hardware.getLauncher().LaunchFar());
+        RightOP.whenActive(hardware.getLauncher().LaunchFar());
+
   }
 
   public void read() {
@@ -148,6 +150,7 @@
       driver.readButtons();
       RightTrigger.readValue();
       LeftTrigger.readValue();
+      RightOPReader.readValue();
       hardware.getFollower().setTeleOpDrive(-driver.gamepad.left_stick_y, -driver.gamepad.left_stick_x, -driver.gamepad.right_stick_x, true);
     }
     hardware.read();
