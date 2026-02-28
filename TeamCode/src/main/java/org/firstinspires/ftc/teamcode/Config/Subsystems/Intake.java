@@ -39,6 +39,7 @@ public class Intake extends WSubsystem {
     GROUND_INTAKING,
     HP_INTAKING,
     LAUNCH,
+    SLOW_LAUNCH,
     HOLD
   }
 
@@ -88,6 +89,11 @@ public class Intake extends WSubsystem {
         this.FeederServoTargetPos = Constants.Intake.FEEDER_SERVO_OPEN;
         this.intakeMotorTargetPower = Constants.Intake.INTAKE_MOTOR_FORWARD;
         this.transferMotorTargetPower = Constants.Intake.TRANSFER_MOTOR_FORWARD;
+        break;
+      case SLOW_LAUNCH:
+        this.FeederServoTargetPos = Constants.Intake.FEEDER_SERVO_OPEN;
+        this.intakeMotorTargetPower = Constants.Intake.INTAKE_MOTOR_FORWARD;
+        this.transferMotorTargetPower = Constants.Intake.TRANSFER_MOTOR_FORWARD_SLOW;
         break;
       case HP_INTAKING:
         this.FeederServoTargetPos = Constants.Intake.FEEDER_SERVO_OPEN;
@@ -142,6 +148,7 @@ public class Intake extends WSubsystem {
   public InstantCommand Launch(){
       return new InstantCommand(()-> intakeState = State.LAUNCH);
   }
+  public InstantCommand LaunchSlow(){return new InstantCommand(()-> intakeState = State.SLOW_LAUNCH);}
   public InstantCommand HP_Intaking(){
       return new InstantCommand(()-> intakeState = State.HP_INTAKING);
   }

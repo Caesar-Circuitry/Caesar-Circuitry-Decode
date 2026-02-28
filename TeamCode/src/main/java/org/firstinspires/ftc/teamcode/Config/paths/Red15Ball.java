@@ -8,24 +8,24 @@ import com.pedropathing.paths.PathChain;
 
 import org.firstinspires.ftc.teamcode.Config.Subsystems.Intake;
 
-public class ZacPathing {
+public class Red15Ball {
     // Unified pose points with headings (in radians)
-    public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
-    public static final Pose LAUNCH_POSE_ANGLE = new Pose(54,78, Math.toRadians(220));
-    public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(44,73, Math.toRadians(190));
-    public static final Pose INTAKE_MIDDLE = new Pose(8,48,Math.toRadians(180));
-    public static final Pose INTAKE_TOP = new Pose(14,73,Math.toRadians(180));
-    public static final Pose GATE_HANDLE = new Pose(13,56,Math.toRadians(180));
-    public static final Pose RAMP_INTAKE = new Pose(-10,46,Math.toRadians(125));
-    public static final Pose FINAL_LAUNCH = new Pose(50,108,Math.toRadians(310));
+    public static final Pose START_POSE = new Pose(141.5-30,135-12, Math.toRadians(270));
+    public static final Pose LAUNCH_POSE_ANGLE = new Pose(141.5-55,78, Math.toRadians(-40));
+    public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(141.5-55,84, Math.toRadians(-10));
+    public static final Pose INTAKE_MIDDLE = new Pose(141.5-24,60,Math.toRadians(0));
+    public static final Pose INTAKE_TOP = new Pose(141.5-34,83,Math.toRadians(0));
+    public static final Pose GATE_HANDLE = new Pose(141.5-32,68,Math.toRadians(0));
+    public static final Pose RAMP_INTAKE = new Pose(141.5-22,54,Math.toRadians(45));
+    public static final Pose FINAL_LAUNCH = new Pose(141.5-52,100,Math.toRadians(-147));
 
     // Control points for curves (no heading needed)
-    public static final Pose CONTROL_LAUNCH = new Pose(45,46);
-    public static final Pose CONTROL_GATE = new Pose(35,65);
+    public static final Pose CONTROL_LAUNCH = new Pose(144-54,56);
+    public static final Pose CONTROL_GATE = new Pose(144-45,75);
 
     private Follower follower;
 
-    public ZacPathing(Follower follower) {
+    public Red15Ball(Follower follower) {
         this.follower = follower;
     }
 
@@ -55,7 +55,7 @@ public class ZacPathing {
     }
     public PathChain moveTo3rdLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(INTAKE_TOP, new Pose(LAUNCH_POSE_ANGLE.getX()-4,LAUNCH_POSE_ANGLE.getY()-6))
+                        new BezierLine(INTAKE_TOP, new Pose(LAUNCH_POSE_ANGLE.getX()+4,LAUNCH_POSE_ANGLE.getY()+6))
                 ).setLinearHeadingInterpolation(INTAKE_TOP.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .setGlobalDeceleration(0.25)
                 .build();
@@ -70,18 +70,18 @@ public class ZacPathing {
         return follower.pathBuilder().addPath(
                         new BezierLine(GATE_HANDLE, RAMP_INTAKE)
                 ).setLinearHeadingInterpolation(GATE_HANDLE.getHeading(), RAMP_INTAKE.getHeading())
-                .setTValueConstraint(.7)
+                .setTValueConstraint(.8)
                 .build();
     }
     public PathChain moveTo4thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_INTAKE, new Pose(LAUNCH_POSE_ANGLE.getX()-8,LAUNCH_POSE_ANGLE.getY()-6))
+                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()-8),new Pose(LAUNCH_POSE_ANGLE.getX()-4,LAUNCH_POSE_ANGLE.getY()-6))
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .build();
     }
     public PathChain moveTo5thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_INTAKE, FINAL_LAUNCH)
+                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()-8), FINAL_LAUNCH)
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), FINAL_LAUNCH.getHeading())
                 .build();
     }

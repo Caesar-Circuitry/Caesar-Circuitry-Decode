@@ -1,5 +1,7 @@
 package org.firstinspires.ftc.teamcode.Config.Subsystems;
 
+
+
 import java.util.List;
 import java.util.LinkedList;
 
@@ -61,12 +63,13 @@ public class Launcher extends WSubsystem {
 //    flywheelSpeeds.add(73,1250);
 //    flywheelSpeeds.add(76,1275);
 //    flywheelSpeeds.add(114,1500);
-    flywheelSpeeds.add(18,900);
-    flywheelSpeeds.add(49,1000);
-    flywheelSpeeds.add(57,1050);
-    flywheelSpeeds.add(63,1100);
-    flywheelSpeeds.add(73,1150);
-    flywheelSpeeds.add(76,1175);
+    flywheelSpeeds.add(24,1050);
+    flywheelSpeeds.add(36,1100);
+    flywheelSpeeds.add(49,1150);
+    flywheelSpeeds.add(60,1200);
+    flywheelSpeeds.add(68,1275);
+    flywheelSpeeds.add(73,1325);
+    flywheelSpeeds.add(84, 1375);
     flywheelSpeeds.add(114,1400);
     flywheelSpeeds.createLUT();
 
@@ -221,7 +224,7 @@ public class Launcher extends WSubsystem {
   }
 
   public double getFlywheelVelocity() {
-    return flywheelVelocity;
+    return flywheelVelocity + Constants.Launcher.nudge;
   }
 
   public double getBatteryVoltageValue() {
@@ -268,6 +271,12 @@ public class Launcher extends WSubsystem {
           return true;
       }
       return false;
+  }
+  public void minusNudge(){
+    Constants.Launcher.nudge -= Constants.Launcher.nudge_By;
+  }
+  public void plusNudge(){
+    Constants.Launcher.nudge += Constants.Launcher.nudge_By;
   }
 
   @Override

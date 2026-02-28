@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -13,6 +14,7 @@ import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.paths.BlueStartFromClose;
 import org.firstinspires.ftc.teamcode.Config.robot;
 @Autonomous
+@Disabled
 public class BlueClosePathOnly extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;

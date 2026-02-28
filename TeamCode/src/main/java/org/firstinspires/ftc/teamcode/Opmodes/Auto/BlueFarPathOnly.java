@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.RunCommand;
 import com.seattlesolvers.solverslib.command.SequentialCommandGroup;
@@ -10,7 +11,7 @@ import com.seattlesolvers.solverslib.pedroCommand.FollowPathCommand;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.paths.BlueStartFromFar;
 import org.firstinspires.ftc.teamcode.Config.robot;
-
+@Disabled
 public class BlueFarPathOnly extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;

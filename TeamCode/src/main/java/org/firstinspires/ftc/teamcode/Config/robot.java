@@ -45,6 +45,10 @@
      Trigger Left;
      TriggerReader RightOPReader;
      Trigger RightOP;
+     Button RightBumperOP;
+     Button LeftBumperOP;
+     Button DpadUpOP;
+     Button DpadDownOP;
 
   // the constructor with a specified opmode type
   /**
@@ -120,6 +124,10 @@
     dpadUp = new GamepadButton(driver, GamepadKeys.Button.DPAD_UP);
     RightOPReader = new TriggerReader(operator, GamepadKeys.Trigger.RIGHT_TRIGGER);
     RightOP = new Trigger(()->RightOPReader.isDown());
+    RightBumperOP = new GamepadButton(operator, GamepadKeys.Button.RIGHT_BUMPER);
+    LeftBumperOP = new GamepadButton(operator, GamepadKeys.Button.LEFT_BUMPER);
+    DpadUpOP = new GamepadButton(operator, GamepadKeys.Button.DPAD_UP);
+    DpadDownOP = new GamepadButton(operator,GamepadKeys.Button.DPAD_DOWN);
   }
 
   private void driverTriggerCommands() {
@@ -129,10 +137,13 @@
       RightBumper.whileHeld(hardware.getIntake().GroundIntake());
       LeftBumper.whileHeld(hardware.getIntake().HP_Intaking());
       Right.whenInactive(hardware.getLauncher().stopPower());
+
+      RightOP.whenInactive(hardware.getLauncher().stopPower());
+
 //      Left.whenInactive(hardware.getLauncher().stopPower());
 //      Left.whenActive(hardware.getLauncher().LaunchFar());
-//      Right.whenActive(hardware.getLauncher().LaunchFar());
-      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
+      Right.whenActive(hardware.getLauncher().LaunchFar());
+//      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
       Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
@@ -140,8 +151,12 @@
       Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
 
       //OPERATOR
-      RightOP.whenInactive(hardware.getLauncher().stopPower());
         RightOP.whenActive(hardware.getLauncher().LaunchFar());
+
+        RightBumperOP.whenPressed(hardware.getTurret()::minusNudge);
+        LeftBumperOP.whenPressed(hardware.getTurret()::plusNudge);
+        DpadUpOP.whenPressed(hardware.getLauncher()::plusNudge);
+        DpadUpOP.whenPressed(hardware.getLauncher()::minusNudge);
 
   }
 

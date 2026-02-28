@@ -2,6 +2,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.InstantCommand;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
@@ -14,7 +15,7 @@ import org.firstinspires.ftc.teamcode.Config.Commands.LaunchWhenReady;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.paths.RedStartFromFar;
 import org.firstinspires.ftc.teamcode.Config.robot;
-
+@Disabled
 public class RedFarAuto extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;

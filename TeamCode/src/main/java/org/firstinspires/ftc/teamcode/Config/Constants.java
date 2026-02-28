@@ -39,6 +39,9 @@ public class Constants {
 
     public static final double LUTDistance = 8.616; // center of the robot to where distance was measured
 
+      public static final double nudge_By = 50;
+      public static double nudge = 0;
+
     // Telemetry logging toggle for Launcher
     public static boolean logTelemetry = false;
   }
@@ -69,6 +72,7 @@ public class Constants {
     public static final double INTAKE_MOTOR_HP = 0.5;
 
     public static final double TRANSFER_MOTOR_FORWARD = -1.0;
+    public static final double TRANSFER_MOTOR_FORWARD_SLOW = -0.7;
     public static final double TRANSFER_MOTOR_REVERSE = -1.0;
     public static final double TRANSFER_MOTOR_HOLD = -0.35;
     public static final double TRANSFER_MOTOR_HP = 0.5;
@@ -98,6 +102,9 @@ public class Constants {
       public static  double GoalAngleBlue = -18; // degrees
       public static final double GoalAngleRed = 18;//red
         public static final double WRAP_THRESHOLD = 270.0;
+
+        public static final double nudge_By = 8;
+        public static double nudge = 0;
 
       public static boolean logTelemetry = false;
 

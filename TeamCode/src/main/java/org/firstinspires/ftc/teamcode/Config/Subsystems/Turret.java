@@ -105,7 +105,7 @@ public class Turret extends WSubsystem {
       double dy = targetPose.getY() - robotPose.getY();
       // atan2(dy, dx) gives 0° = +X direction, matching Pedro heading convention
       // Add 180° so the flywheel side (not the back) faces the target
-      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx)) + 180;
+      double fieldAngleToTarget = Math.toDegrees(Math.atan2(dy, dx)) + 180 + nudge;
       // Convert field angle to robot-relative: subtract robot heading
       desiredTurretAngle = wrap180(fieldAngleToTarget - heading);
       usingHeadingCompensation = true;
@@ -456,5 +456,12 @@ public class Turret extends WSubsystem {
    */
   public boolean isTargetClamped() {
     return Math.abs(desiredTurretAngle) > SAFE_LIMIT && !isWrapping;
+  }
+
+  public void minusNudge(){
+    nudge -= nudge_By;
+  }
+  public void plusNudge(){
+    nudge += nudge_By;
   }
 }
