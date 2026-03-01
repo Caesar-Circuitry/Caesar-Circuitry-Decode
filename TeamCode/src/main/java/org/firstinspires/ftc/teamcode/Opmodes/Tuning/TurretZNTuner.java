@@ -1,4 +1,4 @@
-package org.firstinspires.ftc.teamcode.Config.Opmodes;
+package org.firstinspires.ftc.teamcode.Opmodes.Tuning;
 
 import com.bylazar.configurables.annotations.Configurable;
 import com.bylazar.telemetry.PanelsTelemetry;
@@ -9,7 +9,6 @@ import com.qualcomm.robotcore.hardware.CRServo;
 import com.qualcomm.robotcore.hardware.DcMotorEx;
 import com.qualcomm.robotcore.util.ElapsedTime;
 
-import org.firstinspires.ftc.robotcore.external.Telemetry;
 import org.firstinspires.ftc.teamcode.Config.Constants;
 import org.firstinspires.ftc.teamcode.Config.Utils.ThroughBoreEncoder;
 

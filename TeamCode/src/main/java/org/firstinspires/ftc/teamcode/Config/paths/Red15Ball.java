@@ -16,8 +16,8 @@ public class Red15Ball {
     public static final Pose INTAKE_MIDDLE = new Pose(141.5-24,60,Math.toRadians(0));
     public static final Pose INTAKE_TOP = new Pose(141.5-34,83,Math.toRadians(0));
     public static final Pose GATE_HANDLE = new Pose(141.5-32,68,Math.toRadians(0));
-    public static final Pose RAMP_INTAKE = new Pose(141.5-22,54,Math.toRadians(45));
-    public static final Pose FINAL_LAUNCH = new Pose(141.5-52,100,Math.toRadians(-147));
+    public static final Pose RAMP_INTAKE = new Pose(141.5-22,54,Math.toRadians(48));
+    public static final Pose FINAL_LAUNCH = new Pose(141.5-62,100,Math.toRadians(-147));
 
     // Control points for curves (no heading needed)
     public static final Pose CONTROL_LAUNCH = new Pose(144-54,56);
@@ -70,18 +70,24 @@ public class Red15Ball {
         return follower.pathBuilder().addPath(
                         new BezierLine(GATE_HANDLE, RAMP_INTAKE)
                 ).setLinearHeadingInterpolation(GATE_HANDLE.getHeading(), RAMP_INTAKE.getHeading())
-                .setTValueConstraint(.8)
+                .setTValueConstraint(.6)
                 .build();
     }
     public PathChain moveTo4thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()-8),new Pose(LAUNCH_POSE_ANGLE.getX()-4,LAUNCH_POSE_ANGLE.getY()-6))
+                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()+8),new Pose(LAUNCH_POSE_ANGLE.getX()-4,LAUNCH_POSE_ANGLE.getY()-6))
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
+                .build();
+    }
+    public PathChain park() {
+        return follower.pathBuilder().addPath(
+                        new BezierLine(new Pose(LAUNCH_POSE_ANGLE.getX()-4,LAUNCH_POSE_ANGLE.getY()-6), FINAL_LAUNCH)
+                ).setLinearHeadingInterpolation(LAUNCH_POSE_ANGLE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .build();
     }
     public PathChain moveTo5thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()-8), FINAL_LAUNCH)
+                        new BezierCurve(RAMP_INTAKE, new Pose(RAMP_INTAKE.getX()-20,RAMP_INTAKE.getY()-20), FINAL_LAUNCH)
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), FINAL_LAUNCH.getHeading())
                 .build();
     }

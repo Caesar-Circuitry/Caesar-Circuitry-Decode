@@ -44,11 +44,13 @@
      Trigger Right;
      Trigger Left;
      TriggerReader RightOPReader;
+     TriggerReader LeftOPTrigger;
      Trigger RightOP;
      Button RightBumperOP;
      Button LeftBumperOP;
      Button DpadUpOP;
      Button DpadDownOP;
+     Trigger LeftOP;
 
   // the constructor with a specified opmode type
   /**
@@ -111,9 +113,9 @@
 
   private void driverTriggers() {
     Cross = new GamepadButton(driver, GamepadKeys.Button.CROSS);
-    Circle = new GamepadButton(driver, GamepadKeys.Button.CIRCLE);
+//    Circle = new GamepadButton(driver, GamepadKeys.Button.CIRCLE);
     Triangle = new GamepadButton(driver, GamepadKeys.Button.TRIANGLE);
-    Square = new GamepadButton(driver,GamepadKeys.Button.SQUARE);
+//    Square = new GamepadButton(driver,GamepadKeys.Button.SQUARE);
     RightBumper = new GamepadButton(driver,GamepadKeys.Button.RIGHT_BUMPER);
     LeftBumper = new GamepadButton(driver,GamepadKeys.Button.LEFT_BUMPER);
     RightTrigger = new TriggerReader(driver, GamepadKeys.Trigger.RIGHT_TRIGGER);
@@ -128,6 +130,8 @@
     LeftBumperOP = new GamepadButton(operator, GamepadKeys.Button.LEFT_BUMPER);
     DpadUpOP = new GamepadButton(operator, GamepadKeys.Button.DPAD_UP);
     DpadDownOP = new GamepadButton(operator,GamepadKeys.Button.DPAD_DOWN);
+    LeftOPTrigger = new TriggerReader(operator, GamepadKeys.Trigger.LEFT_TRIGGER);
+    LeftOP = new Trigger(LeftOPTrigger::wasJustPressed);
   }
 
   private void driverTriggerCommands() {
@@ -139,24 +143,26 @@
       Right.whenInactive(hardware.getLauncher().stopPower());
 
       RightOP.whenInactive(hardware.getLauncher().stopPower());
-
-//      Left.whenInactive(hardware.getLauncher().stopPower());
-//      Left.whenActive(hardware.getLauncher().LaunchFar());
-      Right.whenActive(hardware.getLauncher().LaunchFar());
-//      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
+      LeftOP.whenInactive(hardware.getLauncher().stopPower());
+      Left.whenInactive(hardware.getLauncher().stopPower());
+      Left.whenActive(hardware.getLauncher().LaunchFar());
+//      Right.whenActive(hardware.getLauncher().LaunchFar());
+      Right.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
       dpadUp.whenHeld(hardware.getIntake().Launch());
       dpadDown.whenHeld(hardware.getIntake().Hold());
-      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
-      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
+//      Circle.whenReleased(()->hardware.getTurret().enablePinpointTracking());
+//      Square.whenReleased(()->hardware.getTurret().disablePinpointTracking());
       Triangle.whenReleased(()->hardware.getDrivetrain().resetDrive());
 
       //OPERATOR
-        RightOP.whenActive(hardware.getLauncher().LaunchFar());
+        RightOP.whenActive(hardware.getLauncher().LaunchPose(this.hardware.getDrivetrain().getPose(),Constants.Robot.Goal));
 
         RightBumperOP.whenPressed(hardware.getTurret()::minusNudge);
         LeftBumperOP.whenPressed(hardware.getTurret()::plusNudge);
         DpadUpOP.whenPressed(hardware.getLauncher()::plusNudge);
         DpadUpOP.whenPressed(hardware.getLauncher()::minusNudge);
+
+        LeftOP.whenActive(hardware.getLauncher().LaunchFar());
 
   }
 
@@ -166,6 +172,7 @@
       RightTrigger.readValue();
       LeftTrigger.readValue();
       RightOPReader.readValue();
+      LeftOPTrigger.readValue();
       hardware.getFollower().setTeleOpDrive(-driver.gamepad.left_stick_y, -driver.gamepad.left_stick_x, -driver.gamepad.right_stick_x, true);
     }
     hardware.read();
