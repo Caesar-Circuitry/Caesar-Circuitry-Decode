@@ -4,11 +4,15 @@ import org.firstinspires.ftc.robotcore.external.navigation.DistanceUnit;
 
 import com.pedropathing.control.FilteredPIDFCoefficients;
 import com.pedropathing.control.PIDFCoefficients;
+import com.pedropathing.control.PredictiveBrakingCoefficients;
 import com.pedropathing.follower.Follower;
 import com.pedropathing.follower.FollowerConstants;
 import com.pedropathing.ftc.FollowerBuilder;
 import com.pedropathing.ftc.drivetrains.MecanumConstants;
 import com.pedropathing.ftc.localization.constants.PinpointConstants;
+import com.pedropathing.ftc.localization.localizers.PinpointLocalizer;
+import com.pedropathing.geometry.Pose;
+import com.pedropathing.localization.FusionLocalizer;
 import com.pedropathing.paths.PathConstraints;
 import com.qualcomm.hardware.gobilda.GoBildaPinpointDriver;
 import com.qualcomm.robotcore.hardware.DcMotorSimple;
@@ -18,14 +22,15 @@ public class PedroConstants {
   public static FollowerConstants followerConstants =
       new FollowerConstants()
           .mass(11.43)
+              .predictiveBrakingCoefficients(new PredictiveBrakingCoefficients(0,0,0))
           .forwardZeroPowerAcceleration(-57.0250923641167)
           .lateralZeroPowerAcceleration(-80.9344756485226)
-          .translationalPIDFCoefficients(new PIDFCoefficients(.12, 0.0, 0.0, 0.02))
+//          .translationalPIDFCoefficients(new PIDFCoefficients(.12, 0.0, 0.0, 0.02))
           .headingPIDFCoefficients(new PIDFCoefficients(0.9, 0.0, 0.0, 0.02))//.9
-          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.1, 0, 0, 0.6, 0.06))//0.005 0.051
+//          .drivePIDFCoefficients(new FilteredPIDFCoefficients(0.1, 0, 0, 0.6, 0.06))//0.005 0.051
               .useSecondaryHeadingPIDF(true)
               .secondaryHeadingPIDFCoefficients(new PIDFCoefficients(1.5,0,0,0.02))
-          .centripetalScaling(0.0005);
+          .centripetalScaling(0);
   public static MecanumConstants driveConstants =
       new MecanumConstants()
           .maxPower(1)
@@ -42,7 +47,8 @@ public class PedroConstants {
               .nominalVoltage(12)
               .useVoltageCompensation(true);
 
-  public static PinpointConstants localizerConstants =
+
+  public static PinpointConstants pinpointlocalization =
       new PinpointConstants()
           .hardwareMapName("pinpoint")
           .forwardPodY(-5.5)
@@ -58,7 +64,7 @@ public class PedroConstants {
     return new FollowerBuilder(followerConstants, hardwareMap)
         .pathConstraints(pathConstraints)
         .mecanumDrivetrain(driveConstants)
-        .pinpointLocalizer(localizerConstants)
+        .setLocalizer(new FusionLocalizer(new PinpointLocalizer(hardwareMap,pinpointlocalization),new Pose(0,0,0),new Pose(0,0,0),new Pose(0,0,0),50))
         .build();
   }
 }

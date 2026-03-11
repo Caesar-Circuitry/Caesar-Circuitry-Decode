@@ -24,6 +24,7 @@ public class Constants {
     public static double kD = 0.0005;
     public static double kS = 0.13;
     public static double Kv = 0.0004065;
+    public static double Ka = 0;
     public static double spinupBoost = 0.5;  // Extra power added during spin-up for faster acceleration
     public static double spinupThreshold = 200;  // Switch to normal control when within this velocity of target
     public static double NOMINAL_BATTERY_VOLTAGE = 12;
@@ -89,8 +90,18 @@ public class Constants {
       public static final double TICKS_PER_REV = 8192.0; // REV Through Bore encoder resolution
 
       public static final double gearRatio = 103.0/28.0; // servo rotations per turret rotation (2:1 = servo rotates 2x)
+    public static final double servoGearRatio = (103.0/21.0) * (24.0/60.0); // servo rotations per turret rotation (2:1 = servo rotates 2x)
+    public static final double encoderGearRatio = 103.0/(21.0);
 
-      // PID gains
+    public static final double RadiansPerTick = (2*Math.PI) / (TICKS_PER_REV *encoderGearRatio);
+
+
+    public static final double TurretMin = Math.toRadians(-135);
+    public static final double TurretMax = Math.toRadians(135);
+
+    public static final double WrapAroundZone = 0.7 * TurretMax;
+
+    // PID gains
       public static double kP = 0.002;//0.005
       public static double kI = 0.0007;//0.0001
       public static double kD = 0.0002;//0.00001

@@ -171,4 +171,8 @@ public class Intake extends WSubsystem {
   public LinkedList<TelemetryPacket> getTelemetry() {
     return telemetryPackets;
   }
+
+  private void ArtifactTrackingLogic(){
+    double ArtifactCounter=0;
+  }
 }
