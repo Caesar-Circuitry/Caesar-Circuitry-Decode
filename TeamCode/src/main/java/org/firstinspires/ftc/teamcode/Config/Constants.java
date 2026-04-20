@@ -106,8 +106,8 @@ public class Constants {
       public static double kI = 0.0007;//0.0001
       public static double kD = 0.0002;//0.00001
 
-      public static double kF_left = 0.095; // Directional feedforward when turning left (positive error) .11
-      public static double kF_right = -0.095; // Directional feedforward when turning right (negative error) -.11
+      public static double kF_left = 0.06; // Directional feedforward when turning left (positive error) .11
+      public static double kF_right = -0.07; // Directional feedforward when turning right (negative error) -.11
       public static double kV = .007; // Velocity feedforward - scales with error to drive turret to target .018
 
       public static  double GoalAngleBlue = -18; // degrees

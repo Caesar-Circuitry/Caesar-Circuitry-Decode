@@ -17,7 +17,7 @@ repositories {
 
 dependencies {
     implementation "com.github.StateFactory-Dev:StateFactory:0.3.9"
-    implementation 'com.pedropathing:ftc:2.1.0-SNAPSHOT'
+    implementation 'com.pedropathing:ftc:2.1.1'
     implementation 'com.pedropathing:telemetry:1.0.0'
     implementation("dev.frozenmilk.sinister:Sloth:0.2.4")
     implementation("com.bylazar.sloth:fullpanels:0.2.4+1.0.12")
