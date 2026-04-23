@@ -34,7 +34,7 @@ public class Blue15BallAuto extends CommandOpMode {
                 new SequentialCommandGroup(
                         robot.getHardware().getIntake().Hold(),
                         robot.getHardware().getLauncher().LaunchSpeed(1200),
-                        robot.getHardware().getTurret().TargetAngle(54),
+                        robot.getHardware().getTurret().TargetAngle(70),
                         // ==================== MOVE TO LAUNCH 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
                         robot.getHardware().getIntake().Launch(),
@@ -45,19 +45,19 @@ public class Blue15BallAuto extends CommandOpMode {
                         robot.getHardware().getLauncher().LaunchSpeed(1125),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeMid(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(-49),
+                        robot.getHardware().getTurret().TargetAngle(-55),
                         // ==================== MOVE TO LAUNCH 1 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo2ndLaunch(robot.getHardware().getIntake()),false),
                         robot.getHardware().getIntake().Hold(),
                         robot.getHardware().getIntake().Launch(),
-                        new WaitCommand(800),
+                        new WaitCommand(1000),//800
                         robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         robot.getHardware().getLauncher().LaunchSpeed(1170),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeTop(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(-97),
+                        robot.getHardware().getTurret().TargetAngle(-100),
                         // ==================== MOVE TO LAUNCH 2 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo3rdLaunch(), false),
                         robot.getHardware().getIntake().Hold(),
@@ -70,26 +70,26 @@ public class Blue15BallAuto extends CommandOpMode {
                         // ==================== INTAKE RAMP 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
-                        robot.getHardware().getTurret().TargetAngle(-120),
-                        new WaitCommand(150),
+                        robot.getHardware().getTurret().TargetAngle(-145),
+                        new WaitCommand(500),//150
                         robot.getHardware().getIntake().Hold(),
                         // ==================== MOVE TO LAUNCH 3 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo4thLaunch(),false),
                         robot.getHardware().getIntake().Launch(),
                         new WaitCommand(800),
                         robot.getHardware().getIntake().closeFeeder(),
-                        // ==================== MOVE TO RAMP 1 ====================
+//                        // ==================== MOVE TO RAMP 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate(),false),
                         //new WaitCommand(10),
-                        // ==================== INTAKE RAMP 1 ====================
+//                        // ==================== INTAKE RAMP 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
-                        new WaitCommand(150),
-                        robot.getHardware().getTurret().TargetAngle(-235),
-                        robot.getHardware().getLauncher().LaunchSpeed(1050),
+                        new WaitCommand(1000), //500
+                        robot.getHardware().getTurret().TargetAngle(-205),//-235
+                        robot.getHardware().getLauncher().LaunchSpeed(1200),
                         robot.getHardware().getIntake().Hold(),
-                        // ==================== MOVE TO LAUNCH 4 ====================
+//                        // ==================== MOVE TO LAUNCH 4 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo5thLaunch(),false),
                         //new WaitCommand(500),
                         robot.getHardware().getIntake().Launch(),
