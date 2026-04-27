@@ -11,13 +11,13 @@ import org.firstinspires.ftc.teamcode.Config.Subsystems.Intake;
 public class Blue15Ball {
     // Unified pose points with headings (in radians)
     public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
-    public static final Pose LAUNCH_POSE_ANGLE = new Pose(55,78, Math.toRadians(220));
+    public static final Pose LAUNCH_POSE_ANGLE = new Pose(57,78, Math.toRadians(220)); //57 78
     public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(44,73, Math.toRadians(190));
-    public static final Pose INTAKE_MIDDLE = new Pose(-2,50,Math.toRadians(180));
+    public static final Pose INTAKE_MIDDLE = new Pose(0,50,Math.toRadians(180));
     public static final Pose INTAKE_TOP = new Pose(13,73,Math.toRadians(180));
     public static final Pose GATE_HANDLE = new Pose(10,56,Math.toRadians(180));
-    public static final Pose RAMP_INTAKE = new Pose(-8,48,Math.toRadians(130));//135
-    public static final Pose FINAL_LAUNCH = new Pose(70,95,Math.toRadians(327));
+    public static final Pose RAMP_INTAKE = new Pose(-10,48,Math.toRadians(135));//135
+    public static final Pose FINAL_LAUNCH = new Pose(40,120,Math.toRadians(327));
 
     // Control points for curves (no heading needed)
     public static final Pose CONTROL_LAUNCH = new Pose(45,46);
@@ -55,7 +55,7 @@ public class Blue15Ball {
     }
     public PathChain moveTo3rdLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(INTAKE_TOP, new Pose(LAUNCH_POSE_ANGLE.getX()-8,LAUNCH_POSE_ANGLE.getY()-2))
+                        new BezierLine(INTAKE_TOP, new Pose(LAUNCH_POSE_ANGLE.getX()-6,LAUNCH_POSE_ANGLE.getY()-2))
                 ).setLinearHeadingInterpolation(INTAKE_TOP.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .setGlobalDeceleration(0.25)
                 .build();
@@ -75,7 +75,7 @@ public class Blue15Ball {
     }
     public PathChain moveTo4thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_INTAKE, new Pose(LAUNCH_POSE_ANGLE.getX(),LAUNCH_POSE_ANGLE.getY()+3))
+                        new BezierLine(RAMP_INTAKE, new Pose(LAUNCH_POSE_ANGLE.getX()-1,LAUNCH_POSE_ANGLE.getY()+1))
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .build();
     }

@@ -3,6 +3,7 @@ package org.firstinspires.ftc.teamcode.Opmodes.Auto;
 import com.bylazar.telemetry.JoinedTelemetry;
 import com.bylazar.telemetry.PanelsTelemetry;
 import com.qualcomm.robotcore.eventloop.opmode.Autonomous;
+import com.qualcomm.robotcore.eventloop.opmode.Disabled;
 import com.seattlesolvers.solverslib.command.CommandOpMode;
 import com.seattlesolvers.solverslib.command.ParallelCommandGroup;
 import com.seattlesolvers.solverslib.command.RunCommand;
@@ -14,6 +15,7 @@ import org.firstinspires.ftc.teamcode.Config.paths.Blue15BallGood;
 import org.firstinspires.ftc.teamcode.Config.robot;
 
 @Autonomous
+@Disabled
 public class Blue15BallAutoGood extends CommandOpMode {
     private robot robot;
     private JoinedTelemetry Telemetry;
