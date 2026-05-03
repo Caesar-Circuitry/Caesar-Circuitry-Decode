@@ -11,7 +11,7 @@ import org.firstinspires.ftc.teamcode.Config.Subsystems.Intake;
 public class Red15Ball {
     // Unified pose points with headings (in radians)
     public static final Pose START_POSE = new Pose(141.5-30,135-12, Math.toRadians(270));
-    public static final Pose LAUNCH_POSE_ANGLE = new Pose(141.5-55,78, Math.toRadians(-40));
+    public static final Pose LAUNCH_POSE_ANGLE = new Pose(141.5-50,85, Math.toRadians(-40));
     public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(141.5-55,84, Math.toRadians(-10));
     public static final Pose INTAKE_MIDDLE = new Pose(141.5-24,60,Math.toRadians(0));
     public static final Pose INTAKE_TOP = new Pose(141.5-34,83,Math.toRadians(0));

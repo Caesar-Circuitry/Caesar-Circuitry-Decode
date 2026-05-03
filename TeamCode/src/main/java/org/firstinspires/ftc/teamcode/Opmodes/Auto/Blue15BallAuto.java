@@ -33,19 +33,19 @@ public class Blue15BallAuto extends CommandOpMode {
                 new RunCommand(this.robot::write),
                 new SequentialCommandGroup(
                         robot.getHardware().getIntake().Hold(),
-                        robot.getHardware().getLauncher().LaunchSpeed(1150),
-                        robot.getHardware().getTurret().TargetAngle(65),
+                        robot.getHardware().getLauncher().LaunchSpeed(1200),
+                        robot.getHardware().getTurret().TargetAngle(60),//63
                         // ==================== MOVE TO LAUNCH 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo1stLaunch(),false),
                         robot.getHardware().getIntake().Launch(),
-                        new WaitCommand(800),
+                        new WaitCommand(900),
                         robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         robot.getHardware().getLauncher().LaunchSpeed(1125),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeMid(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(-58),
+                        robot.getHardware().getTurret().TargetAngle(-55),//-60
                         // ==================== MOVE TO LAUNCH 1 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo2ndLaunch(robot.getHardware().getIntake()),false),
                         robot.getHardware().getIntake().Hold(),
@@ -54,15 +54,15 @@ public class Blue15BallAuto extends CommandOpMode {
                         robot.getHardware().getIntake().closeFeeder(),
                         // ==================== INTAKE ARTIFACT 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
-                        robot.getHardware().getLauncher().LaunchSpeed(1170),
+                        robot.getHardware().getLauncher().LaunchSpeed(1130),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToIntakeTop(),false),
                         new WaitCommand(10),
-                        robot.getHardware().getTurret().TargetAngle(-90),
+                        robot.getHardware().getTurret().TargetAngle(-97), //too far right
                         // ==================== MOVE TO LAUNCH 2 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo3rdLaunch(), false),
                         robot.getHardware().getIntake().Hold(),
                         robot.getHardware().getIntake().Launch(),
-                        new WaitCommand(800),
+                        new WaitCommand(1000),
                         robot.getHardware().getIntake().closeFeeder(),
 //                      // ==================== MOVE TO RAMP 0 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToGate(),false),
@@ -70,13 +70,13 @@ public class Blue15BallAuto extends CommandOpMode {
                         // ==================== INTAKE RAMP 0 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
-                        robot.getHardware().getTurret().TargetAngle(-140),
-                        new WaitCommand(500),//150
+                        robot.getHardware().getTurret().TargetAngle(-155.5),
+                        new WaitCommand(1175),//150
                         robot.getHardware().getIntake().Hold(),
                         // ==================== MOVE TO LAUNCH 3 ====================
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo4thLaunch(),false),
                         robot.getHardware().getIntake().Launch(),
-                        new WaitCommand(800),
+                        new WaitCommand(1200),
                         robot.getHardware().getIntake().closeFeeder(),
 //                        // ==================== MOVE TO RAMP 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
@@ -85,15 +85,16 @@ public class Blue15BallAuto extends CommandOpMode {
 //                        // ==================== INTAKE RAMP 1 ====================
                         robot.getHardware().getIntake().GroundIntake(),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveToRampIntake(), false),
-                        new WaitCommand(1000), //500
-                        robot.getHardware().getTurret().TargetAngle(-225),//-235
-                        robot.getHardware().getLauncher().LaunchSpeed(1050),
+                        new WaitCommand(1200), //500
+                        robot.getHardware().getTurret().TargetAngle(-233.5),//-235
+                        robot.getHardware().getLauncher().LaunchSpeed(1020),
                         robot.getHardware().getIntake().Hold(),
 //                        // ==================== MOVE TO LAUNCH 4 ====================
+                        new FollowPathCommand(robot.getHardware().getFollower(), paths.readjust(), false),
                         new FollowPathCommand(robot.getHardware().getFollower(), paths.moveTo5thLaunch(),false),
                         //new WaitCommand(500),
                         robot.getHardware().getIntake().Launch(),
-                        new WaitCommand(800),
+                        new WaitCommand(1200),
                         robot.getHardware().getIntake().closeFeeder(),
                         robot.getHardware().getLauncher().LaunchSpeed(0),
                         robot.getHardware().getLauncher().stopPower()

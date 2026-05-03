@@ -13,10 +13,11 @@ public class Blue15Ball {
     public static final Pose START_POSE = new Pose(32,135, Math.toRadians(270));
     public static final Pose LAUNCH_POSE_ANGLE = new Pose(57,78, Math.toRadians(220)); //57 78
     public static final Pose LAUNCH_POSE_STRAIGHT = new Pose(44,73, Math.toRadians(190));
-    public static final Pose INTAKE_MIDDLE = new Pose(0,50,Math.toRadians(180));
+    public static final Pose INTAKE_MIDDLE = new Pose(6,50,Math.toRadians(180));
     public static final Pose INTAKE_TOP = new Pose(13,73,Math.toRadians(180));
-    public static final Pose GATE_HANDLE = new Pose(10,56,Math.toRadians(180));
-    public static final Pose RAMP_INTAKE = new Pose(-10,48,Math.toRadians(135));//135
+    public static final Pose GATE_HANDLE = new Pose(20,60,Math.toRadians(180));
+    public static final Pose RAMP_INTAKE = new Pose(-10,47,Math.toRadians(128));//135
+    public static final Pose READJUST_FINAL = new Pose(0,47,Math.toRadians(128));
     public static final Pose FINAL_LAUNCH = new Pose(40,120,Math.toRadians(327));
 
     // Control points for curves (no heading needed)
@@ -79,10 +80,16 @@ public class Blue15Ball {
                 ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), LAUNCH_POSE_ANGLE.getHeading())
                 .build();
     }
+    public PathChain readjust() {
+        return follower.pathBuilder().addPath(
+                new BezierLine(RAMP_INTAKE,READJUST_FINAL)
+        ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), READJUST_FINAL.getHeading())
+                .build();
+    }
     public PathChain moveTo5thLaunch() {
         return follower.pathBuilder().addPath(
-                        new BezierLine(RAMP_INTAKE, FINAL_LAUNCH)
-                ).setLinearHeadingInterpolation(RAMP_INTAKE.getHeading(), FINAL_LAUNCH.getHeading())
+                        new BezierLine(READJUST_FINAL, FINAL_LAUNCH)
+                ).setLinearHeadingInterpolation(READJUST_FINAL.getHeading(), FINAL_LAUNCH.getHeading())
                 .build();
     }
 }
